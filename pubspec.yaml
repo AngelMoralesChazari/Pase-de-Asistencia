@@ -1,0 +1,26 @@
+name: pase_de_asistencia
+description: "Pase de Asistencia de los Maestros"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  page_transition: ^2.0.9
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/fondo.jpg
+    - assets/images/login.jpg
+    - assets/images/inicio.jpg
+    - assets/supervisores.json

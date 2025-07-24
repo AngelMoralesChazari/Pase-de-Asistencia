@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "200627463961",
+    "project_id": "flutterrealtimeapp-91382",
+    "storage_bucket": "flutterrealtimeapp-91382.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:200627463961:android:f351b9aa853c807300c788",
+        "android_client_info": {
+          "package_name": "com.example.pase_de_asistencia"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPjMdxgVZExvxhk8R-SCQRaV13WEOIXN0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

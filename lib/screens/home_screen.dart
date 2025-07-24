@@ -55,12 +55,36 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final edificiosFinales =
       edificiosNumericos.map((e) => "Edificio $e").toList()..sort();
-      final horasFinales = horas.toList()..sort();
+
+      int parseHora(String horaStr) {
+        final parts = horaStr.split(' ');
+        if (parts.length != 2) return 0;
+
+        final hm = parts[0].split(':');
+        if (hm.length != 2) return 0;
+
+        int hora = int.tryParse(hm[0]) ?? 0;
+        int minuto = int.tryParse(hm[1]) ?? 0;
+        final ampm = parts[1].toLowerCase();
+
+        if (ampm == 'pm' && hora != 12) {
+          hora += 12;
+        }
+        if (ampm == 'am' && hora == 12) {
+          hora = 0;
+        }
+
+        return hora * 60 + minuto;
+      }
+
+      final horasFinales = horas.toList()
+        ..sort((a, b) => parseHora(a).compareTo(parseHora(b)));
 
       setState(() {
         _opcionesFiltro1 = edificiosFinales;
         _opcionesFiltro2 = horasFinales;
       });
+
     }
   }
 

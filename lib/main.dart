@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+//importacion de firebase
+import 'package:firebase_core/firebase_core.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();//firebase
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 

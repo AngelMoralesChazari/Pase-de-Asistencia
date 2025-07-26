@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -35,20 +36,23 @@ class _HomeScreenState extends State<HomeScreen> {
     final snapshot = await ref.get();
 
     if (snapshot.exists) {
-      final data = snapshot.value as List<dynamic>;
+      final dataMap = snapshot.value as Map<dynamic, dynamic>;
 
       final Set<String> horas = {};
       final Set<String> edificiosNumericos = {};
 
-      for (var clase in data) {
+      for (var clase in dataMap.values) {
         if (clase is Map) {
           if (clase['A'] != null && clase['A'].toString().isNotEmpty) {
             String aula = clase['A'].toString();
-            String prefijo = aula.substring(0, 1);
-            edificiosNumericos.add(prefijo);
+            if (aula.length >= 1) {
+              String prefijo = aula.substring(0, 1);
+              edificiosNumericos.add(prefijo);
+            }
           }
           if (clase['B'] != null) {
-            horas.add(clase['B']);
+            final horaCruda = clase['B'].toString().trim();
+            horas.add(horaCruda);
           }
         }
       }
@@ -57,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
       edificiosNumericos.map((e) => "Edificio $e").toList()..sort();
 
       int parseHora(String horaStr) {
+        horaStr = horaStr.trim();
         final parts = horaStr.split(' ');
         if (parts.length != 2) return 0;
 
@@ -84,7 +89,60 @@ class _HomeScreenState extends State<HomeScreen> {
         _opcionesFiltro1 = edificiosFinales;
         _opcionesFiltro2 = horasFinales;
       });
+    }
+  }
 
+  void buscarClases() async {
+    if (_filtro1Seleccionado == null || _filtro2Seleccionado == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona ambos filtros')),
+      );
+      return;
+    }
+
+    final app = Firebase.app();
+    final database = FirebaseDatabase.instanceFor(
+      app: app,
+      databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+    );
+
+    final ref = database.ref();
+    final snapshot = await ref.get();
+
+    if (snapshot.exists) {
+      final dataMap = snapshot.value as Map<dynamic, dynamic>;
+
+      final resultadosFiltrados = dataMap.values.where((clase) {
+        if (clase is Map) {
+          final aula = clase['A']?.toString() ?? '';
+          final hora = clase['B']?.toString() ?? '';
+
+          String edificio = aula.length >= 1 ? "Edificio ${aula.substring(0, 1)}" : '';
+
+          return edificio.isNotEmpty
+              && edificio == _filtro1Seleccionado
+              && hora.trim() == _filtro2Seleccionado?.trim();
+        }
+        return false;
+      }).toList();
+
+      setState(() {
+        _resultados = resultadosFiltrados.map((clase) {
+          return {
+            'aula': clase['A'] ?? '',
+            'horario': clase['B'] ?? '',
+            'dia': clase['C'] ?? '',
+            'grupo': clase['D'] ?? '',
+            'materia': clase['F'] ?? '',
+            'profe': clase['G'] ?? '',
+            'profeid': clase['H'] ?? '',
+          };
+        }).toList();
+      });
+
+      if (_resultados.isEmpty) {
+        print("No se encontraron clases con esos filtros.");
+      }
     }
   }
 
@@ -106,61 +164,20 @@ class _HomeScreenState extends State<HomeScreen> {
         hint: Text(hint),
         isExpanded: true,
         underline: SizedBox(),
-        items: opciones.map((opcion) {
-          return DropdownMenuItem<String>(
-            value: opcion,
-            child: Text(opcion),
-          );
-        }).toList(),
+        dropdownColor: Colors.grey[200],
+        icon: Icon(Icons.arrow_drop_down, color: Colors.grey[700]),
+        menuMaxHeight: 900,
+        itemHeight: 48,
+        alignment: Alignment.bottomLeft,
+        items: opciones
+            .map((opcion) => DropdownMenuItem(
+          value: opcion,
+          child: Text(opcion),
+        ))
+            .toList(),
         onChanged: onChanged,
       ),
     );
-  }
-
-  void buscarClases() async {
-    if (_filtro1Seleccionado == null || _filtro2Seleccionado == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona ambos filtros')),
-      );
-      return;
-    }
-
-    final app = Firebase.app();
-    final database = FirebaseDatabase.instanceFor(
-      app: app,
-      databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
-    );
-
-    final ref = database.ref();
-    final snapshot = await ref.get();
-
-    if (snapshot.exists) {
-      final data = snapshot.value as List<dynamic>;
-
-      final resultadosFiltrados = data.where((clase) {
-        if (clase is Map) {
-          final aula = clase['A']?.toString() ?? '';
-          final hora = clase['B']?.toString() ?? '';
-
-          String edificio = "Edificio ${aula.substring(0, 1)}";
-          return edificio == _filtro1Seleccionado && hora == _filtro2Seleccionado;
-        }
-        return false;
-      }).toList();
-
-      setState(() {
-        _resultados = resultadosFiltrados.map((clase) {
-          return {
-            'materia': clase['F'] ?? 'Materia desconocida',
-            'aula': clase['A'] ?? 'Sin aula',
-          };
-        }).toList();
-      });
-
-      if (_resultados.isEmpty) {
-        print("No se encontraron clases con esos filtros.");
-      }
-    }
   }
 
   @override
@@ -183,7 +200,6 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 children: [
                   SizedBox(height: 125),
-                  // Filtros y botón
                   Row(
                     children: [
                       SizedBox(
@@ -236,16 +252,82 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         child: ListView(
                           children: _resultados.map((clase) {
-                            return ListTile(
-                              leading: Icon(Icons.class_),
-                              title: Text(clase["materia"]),
-                              subtitle: Text("Aula ${clase["aula"]}"),
+                            return Card(
+                              margin: EdgeInsets.only(bottom: 13),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  side: BorderSide(
+                                    color: Colors.grey.withOpacity(0.3),
+                                    width: 1.0,
+                                  )),
+                              child: ExpansionTile(
+                                title: Text(
+                                  clase["profe"],
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                collapsedBackgroundColor: Colors.white,
+                                backgroundColor: Colors.grey[200],
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadiusGeometry.circular(8),
+                                ),
+                                collapsedShape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadiusGeometry.circular(8),
+                                ),
+                                children: [
+                                  Padding(
+                                    padding:
+                                    EdgeInsets.symmetric(horizontal: 16),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                      children: [
+                                        _buildInfoRow('Horario:', clase["horario"]),
+                                        _buildInfoRow('Aula:', clase["aula"]),
+                                        _buildInfoRow('Grupo:', clase["grupo"]),
+                                        _buildInfoRow('Materia:', clase["materia"]),
+                                        SizedBox(height: 10),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             );
                           }).toList(),
                         ),
                       ),
                     ),
                 ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
+          ),
+          SizedBox(width: 5),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700],
               ),
             ),
           ),

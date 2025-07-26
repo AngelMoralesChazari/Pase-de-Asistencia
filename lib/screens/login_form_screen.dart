@@ -147,8 +147,22 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
-                          labelText: 'Correo electrónico',
+                          labelText: 'Correo Electrónico',
+                          labelStyle: const TextStyle(
+                            color: Colors.blueGrey
+                          ),
+                          hintText: 'Ingrese su correo',
+                          hintStyle: const TextStyle(
+                            color: Colors.grey,
+                          ),
                           prefixIcon: const Icon(Icons.email),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(
+                                color: Color(0xFF193863),
+                                width: 2.0
+                            ),
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: Colors.blueAccent),
@@ -171,7 +185,21 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
                         obscureText: _obscurePassword,
                         decoration: InputDecoration(
                           labelText: 'Contraseña',
+                          labelStyle: const TextStyle(
+                              color: Colors.blueGrey
+                          ),
+                          hintText: 'Ingrese su contraseña',
+                          hintStyle: const TextStyle(
+                            color: Colors.grey,
+                          ),
                           prefixIcon: const Icon(Icons.lock),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(
+                                color: Color(0xFF193863),
+                                width: 2.0
+                            ),
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),

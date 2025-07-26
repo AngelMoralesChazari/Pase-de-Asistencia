@@ -1,7 +1,16 @@
+//2.- Pantalla de Inicio de Sesion(Correo)
+
 import 'package:pase_de_asistencia/screens/home_screen.dart'; // Asegúrate que la ruta sea correcta
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
+
+//autenticacion via correo
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
+bool _isGoogleSignIn = false;
+String? _errorMessage;
 
 class LoginFormScreen extends StatefulWidget {
   const LoginFormScreen({super.key});

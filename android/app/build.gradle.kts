@@ -25,7 +25,7 @@ android {
         applicationId = "com.example.pase_de_asistencia"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -39,6 +39,13 @@ android {
         }
     }
 }
+
+dependencies {
+    add("implementation", platform("com.google.firebase:firebase-bom:32.2.0"))
+    add("implementation", "com.google.firebase:firebase-auth")
+    add("implementation", "com.google.android.gms:play-services-auth:20.7.0")
+}
+
 
 flutter {
     source = "../.."

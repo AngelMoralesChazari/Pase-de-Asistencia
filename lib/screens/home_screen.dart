@@ -81,7 +81,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return hora * 60 + minuto;
       }
 
-
       final horasFinales = horas.toList()
         ..sort((a, b) => parseHora(a).compareTo(parseHora(b)));
 

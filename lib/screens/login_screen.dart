@@ -1,3 +1,5 @@
+// 1.- Primera pantalla que se muestra
+
 import 'package:flutter/material.dart';
 import 'package:pase_de_asistencia/screens/login_form_screen.dart';
 

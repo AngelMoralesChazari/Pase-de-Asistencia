@@ -52,7 +52,10 @@ class _HomeScreenState extends State<HomeScreen> {
           }
           if (clase['B'] != null) {
             final horaCruda = clase['B'].toString().trim();
-            horas.add(horaCruda);
+            // Filtrar horas válidas
+            if (horaCruda.contains(':') && horaCruda.length >= 4 && horaCruda != '00:00' && horaCruda != '--') {
+              horas.add(horaCruda);
+            }
           }
         }
       }
@@ -62,25 +65,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
       int parseHora(String horaStr) {
         horaStr = horaStr.trim();
-        final parts = horaStr.split(' ');
-        if (parts.length != 2) return 0;
+        // Extraer solo la hora inicial antes de " a "
+        final partes = horaStr.split(' a ');
+        if (partes.isEmpty) return 0;
 
-        final hm = parts[0].split(':');
+        String horaInicial = partes[0]; // Ejemplo: "18:20"
+
+        // Parsear hora inicial en formato 24h
+        final hm = horaInicial.split(':');
         if (hm.length != 2) return 0;
 
         int hora = int.tryParse(hm[0]) ?? 0;
         int minuto = int.tryParse(hm[1]) ?? 0;
-        final ampm = parts[1].toLowerCase();
-
-        if (ampm == 'pm' && hora != 12) {
-          hora += 12;
-        }
-        if (ampm == 'am' && hora == 12) {
-          hora = 0;
-        }
 
         return hora * 60 + minuto;
       }
+
 
       final horasFinales = horas.toList()
         ..sort((a, b) => parseHora(a).compareTo(parseHora(b)));
@@ -91,6 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
   }
+
 
   void buscarClases() async {
     if (_filtro1Seleccionado == null || _filtro2Seleccionado == null) {
@@ -152,33 +153,35 @@ class _HomeScreenState extends State<HomeScreen> {
     required String hint,
     required void Function(String?) onChanged,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade400),
+    return DropdownButtonFormField<String>(
+      value: value,
+      decoration: InputDecoration(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        hintText: hint,
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.9),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade400),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade400),
+        ),
       ),
-      child: DropdownButton<String>(
-        value: value,
-        hint: Text(hint),
-        isExpanded: true,
-        underline: SizedBox(),
-        dropdownColor: Colors.grey[200],
-        icon: Icon(Icons.arrow_drop_down, color: Colors.grey[700]),
-        menuMaxHeight: 900,
-        itemHeight: 48,
-        alignment: Alignment.bottomLeft,
-        items: opciones
-            .map((opcion) => DropdownMenuItem(
+      isExpanded: true,
+      icon: Icon(Icons.arrow_drop_down, color: Colors.grey[700]),
+      dropdownColor: Colors.grey[200],
+      items: opciones.map((opcion) {
+        return DropdownMenuItem<String>(
           value: opcion,
           child: Text(opcion),
-        ))
-            .toList(),
-        onChanged: onChanged,
-      ),
+        );
+      }).toList(),
+      onChanged: onChanged,
     );
   }
+
 
   @override
   Widget build(BuildContext context) {

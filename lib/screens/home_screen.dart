@@ -14,6 +14,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool _cargando = false;
   List<String> _opcionesFiltro1 = [];
   List<String> _opcionesFiltro2 = [];
   List<String> _todasLasHoras = [];
@@ -166,10 +167,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
   void buscarClases() async {
+    setState(() {
+      _cargando = true;
+    });
+
     if (_filtro1Seleccionado == null || _turnoSeleccionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecciona turno y edificio')),
       );
+      setState(() {
+        _cargando = false;
+      });
       return;
     }
 
@@ -196,9 +204,12 @@ class _HomeScreenState extends State<HomeScreen> {
           // Filtrar por turno
           final partes = hora.split(' a ');
           if (partes.length != 2) return false;
-          final horaInicio = int.tryParse(partes[0].split(':')[0]) ?? 0;
-          if (_turnoSeleccionado == 'AM' && horaInicio >= 12) return false;
-          if (_turnoSeleccionado == 'PM' && horaInicio < 12) return false;
+          final horaInicio = partes[0].trim();
+          final horaNum = int.tryParse(horaInicio.split(':')[0]) ?? 0;
+          if (_turnoSeleccionado == 'AM' && horaNum >= 12) return false;
+          if (_turnoSeleccionado == 'PM' && horaNum < 12) return false;
+          // Filtrar por hora seleccionada
+          if (_filtro2Seleccionado != null && horaInicio != _filtro2Seleccionado) return false;
           return true;
         }
         return false;
@@ -209,11 +220,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
       setState(() {
         _resultados = clasesAgrupadas;
+        _cargando = false;
       });
 
       if (_resultados.isEmpty) {
         print("No se encontraron clases con esos filtros.");
       }
+    } else {
+      setState(() {
+        _cargando = false;
+      });
     }
   }
 
@@ -259,7 +275,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       // Si el aula es igual, ordenar por hora de inicio
-      // Si el aula es igual, ordenar por hora de inicio (como minutos)
       int minutosA = _convertirHoraAMinutos(_parseHoraInicio(a['horario']));
       int minutosB = _convertirHoraAMinutos(_parseHoraInicio(b['horario']));
       int comp = minutosA.compareTo(minutosB);
@@ -553,6 +568,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+            if (_cargando)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withOpacity(0.3),
+                  child: Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

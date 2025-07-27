@@ -28,11 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<String> filtrarHorasPorTurno(String turno, List<String> todasLasHoras) {
     return todasLasHoras.where((hora) {
-      final partes = hora.split(' a ');
-      if (partes.length != 2) return false;
-
-      final horaInicio = partes[0];
-      final partesHora = horaInicio.split(':');
+      final partesHora = hora.split(':');
       if (partesHora.length != 2) return false;
 
       final horaNum = int.tryParse(partesHora[0]) ?? 0;
@@ -46,8 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return false;
     }).toList();
   }
-
-
 
   //Confirmar Salida
   Future<bool> _confirmarSalida() async {
@@ -121,7 +115,12 @@ class _HomeScreenState extends State<HomeScreen> {
             final horaCruda = clase['B'].toString().trim();
             // Filtrar horas válidas
             if (horaCruda.contains(':') && horaCruda.length >= 4 && horaCruda != '00:00' && horaCruda != '--') {
-              horas.add(horaCruda);
+              // Extraer solo la hora de inicio antes de " a "
+              final partes = horaCruda.split(' a ');
+              if (partes.isNotEmpty) {
+                String horaInicio = partes[0].trim();
+                horas.add(horaInicio);
+              }
             }
           }
         }
@@ -149,7 +148,13 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       final horasFinales = horas.toList()
-        ..sort((a, b) => parseHora(a).compareTo(parseHora(b)));
+        ..sort((a, b) {
+          int ha = int.tryParse(a.split(':')[0]) ?? 0;
+          int ma = int.tryParse(a.split(':')[1]) ?? 0;
+          int hb = int.tryParse(b.split(':')[0]) ?? 0;
+          int mb = int.tryParse(b.split(':')[1]) ?? 0;
+          return (ha * 60 + ma).compareTo(hb * 60 + mb);
+          });
 
       setState(() {
         _opcionesFiltro1 = edificiosFinales;
@@ -161,9 +166,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
   void buscarClases() async {
-    if (_filtro1Seleccionado == null || _filtro2Seleccionado == null) {
+    if (_filtro1Seleccionado == null || _turnoSeleccionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona ambos filtros')),
+        const SnackBar(content: Text('Selecciona turno y edificio')),
       );
       return;
     }
@@ -180,38 +185,188 @@ class _HomeScreenState extends State<HomeScreen> {
     if (snapshot.exists) {
       final dataMap = snapshot.value as Map<dynamic, dynamic>;
 
-      final resultadosFiltrados = dataMap.values.where((clase) {
+      // Filtrar por edificio y turno
+      final clasesFiltradas = dataMap.values.where((clase) {
         if (clase is Map) {
           final aula = clase['A']?.toString() ?? '';
           final hora = clase['B']?.toString() ?? '';
-
           String edificio = aula.length >= 1 ? "Edificio ${aula.substring(0, 1)}" : '';
-
-          return edificio.isNotEmpty
-              && edificio == _filtro1Seleccionado
-              && hora.trim() == _filtro2Seleccionado?.trim();
+          // Filtrar por edificio
+          if (edificio != _filtro1Seleccionado) return false;
+          // Filtrar por turno
+          final partes = hora.split(' a ');
+          if (partes.length != 2) return false;
+          final horaInicio = int.tryParse(partes[0].split(':')[0]) ?? 0;
+          if (_turnoSeleccionado == 'AM' && horaInicio >= 12) return false;
+          if (_turnoSeleccionado == 'PM' && horaInicio < 12) return false;
+          return true;
         }
         return false;
       }).toList();
 
+      // Agrupar clases consecutivas
+      final clasesAgrupadas = _agruparClasesConsecutivas(clasesFiltradas);
+
       setState(() {
-        _resultados = resultadosFiltrados.map((clase) {
-          return {
-            'aula': clase['A'] ?? '',
-            'horario': clase['B'] ?? '',
-            'dia': clase['C'] ?? '',
-            'grupo': clase['D'] ?? '',
-            'materia': clase['F'] ?? '',
-            'profe': clase['G'] ?? '',
-            'profeid': clase['H'] ?? '',
-          };
-        }).toList();
+        _resultados = clasesAgrupadas;
       });
 
       if (_resultados.isEmpty) {
         print("No se encontraron clases con esos filtros.");
       }
     }
+  }
+
+  List<Map<dynamic, dynamic>> _agruparClasesConsecutivas(List<dynamic> clases) {
+    // Convertir a lista de mapas y ordenar por profesor, día, aula, materia y hora
+    List<Map<String, dynamic>> clasesOrdenadas = clases.map((clase) {
+      return {
+        'aula': clase['A'] ?? '',
+        'horario': clase['B'] ?? '',
+        'dia': clase['C'] ?? '',
+        'grupo': clase['D'] ?? '',
+        'materia': clase['F'] ?? '',
+        'profe': clase['G'] ?? '',
+        'profeid': clase['H'] ?? '',
+      };
+    }).toList();
+
+    // Ordenar por profesor, día, aula, materia y hora de inicio
+    clasesOrdenadas.sort((a, b) {
+      // Ordenar por número de aula (considerando posibles letras)
+      final regex = RegExp(r'^(\d+)([A-Za-z]*)$');
+      final matchA = regex.firstMatch(a['aula']);
+      final matchB = regex.firstMatch(b['aula']);
+
+      if (matchA != null && matchB != null) {
+        int numA = int.parse(matchA.group(1)!);
+        int numB = int.parse(matchB.group(1)!);
+        int comp = numA.compareTo(numB);
+        if (comp != 0) return comp;
+        // Si el número es igual, comparar la parte de letras
+        comp = (matchA.group(2) ?? '').compareTo(matchB.group(2) ?? '');
+        if (comp != 0) return comp;
+      } else if (matchA != null) {
+        // A es numérica, B no
+        return -1;
+      } else if (matchB != null) {
+        // B es numérica, A no
+        return 1;
+      } else {
+        // Ambos no son numéricos, comparar alfabéticamente
+        int comp = a['aula'].compareTo(b['aula']);
+        if (comp != 0) return comp;
+      }
+
+      // Si el aula es igual, ordenar por hora de inicio
+      // Si el aula es igual, ordenar por hora de inicio (como minutos)
+      int minutosA = _convertirHoraAMinutos(_parseHoraInicio(a['horario']));
+      int minutosB = _convertirHoraAMinutos(_parseHoraInicio(b['horario']));
+      int comp = minutosA.compareTo(minutosB);
+      if (comp != 0) return comp;
+
+      // Si el aula y la hora son iguales, ordenar por nombre de maestro
+      comp = a['profe'].compareTo(b['profe']);
+      if (comp != 0) return comp;
+
+      // Si también es igual, puedes seguir por día, materia, etc.
+      comp = a['dia'].compareTo(b['dia']);
+      if (comp != 0) return comp;
+
+      return a['materia'].compareTo(b['materia']);
+    });
+
+    List<Map<dynamic, dynamic>> resultado = [];
+
+    for (int i = 0; i < clasesOrdenadas.length; i++) {
+      Map<String, dynamic> claseActual = clasesOrdenadas[i];
+
+      // Buscar clases consecutivas del mismo profesor, día, aula y materia
+      List<Map<String, dynamic>> clasesConsecutivas = [claseActual];
+
+      for (int j = i + 1; j < clasesOrdenadas.length; j++) {
+        Map<String, dynamic> siguienteClase = clasesOrdenadas[j];
+
+        // Verificar si es la misma clase (mismo profesor, día, aula, materia)
+        if (claseActual['profe'] == siguienteClase['profe'] &&
+            claseActual['dia'] == siguienteClase['dia'] &&
+            claseActual['aula'] == siguienteClase['aula'] &&
+            claseActual['materia'] == siguienteClase['materia']) {
+
+          // Verificar si las horas son consecutivas
+          String horaFinAnterior = _parseHoraFin(clasesConsecutivas.last['horario']);
+          String horaInicioSiguiente = _parseHoraInicio(siguienteClase['horario']);
+
+          if (_sonHorasConsecutivas(horaFinAnterior, horaInicioSiguiente)) {
+            clasesConsecutivas.add(siguienteClase);
+          } else {
+            break; // No son consecutivas, salir del bucle
+          }
+        } else {
+          break; // No es la misma clase, salir del bucle
+        }
+      }
+
+      // Crear el resultado con el rango de horas unificado
+      String horaInicio = _parseHoraInicio(clasesConsecutivas.first['horario']);
+      String horaFin = _parseHoraFin(clasesConsecutivas.last['horario']);
+      String horarioUnificado = '$horaInicio a $horaFin';
+
+      Map<dynamic, dynamic> claseUnificada = {
+        'aula': claseActual['aula'],
+        'horario': horarioUnificado,
+        'dia': claseActual['dia'],
+        'grupo': claseActual['grupo'],
+        'materia': claseActual['materia'],
+        'profe': claseActual['profe'],
+        'profeid': claseActual['profeid'],
+      };
+
+      resultado.add(claseUnificada);
+
+      // Saltar las clases que ya fueron agrupadas
+      i += clasesConsecutivas.length - 1;
+    }
+
+    return resultado;
+  }
+
+// Función auxiliar para extraer la hora de inicio
+  String _parseHoraInicio(String horario) {
+    final partes = horario.split(' a ');
+    return partes.isNotEmpty ? partes[0].trim() : '';
+  }
+
+// Función auxiliar para extraer la hora de fin
+  String _parseHoraFin(String horario) {
+    final partes = horario.split(' a ');
+    return partes.length > 1 ? partes[1].trim() : '';
+  }
+
+// Función auxiliar para verificar si dos horas son consecutivas
+  bool _sonHorasConsecutivas(String horaFin, String horaInicio) {
+    try {
+      // Convertir horas a minutos para comparar
+      int minutosFin = _convertirHoraAMinutos(horaFin);
+      int minutosInicio = _convertirHoraAMinutos(horaInicio);
+
+      // Considerar consecutivas si la diferencia es de 0 a 10 minutos
+      int diferencia = minutosInicio - minutosFin;
+      return diferencia >= 0 && diferencia <= 10;
+    } catch (e) {
+      return false;
+    }
+  }
+
+// Función auxiliar para convertir hora en formato "HH:MM" a minutos
+  int _convertirHoraAMinutos(String hora) {
+    final partes = hora.split(':');
+    if (partes.length != 2) return 0;
+
+    int horas = int.tryParse(partes[0]) ?? 0;
+    int minutos = int.tryParse(partes[1]) ?? 0;
+
+    return horas * 60 + minutos;
   }
 
   Widget _buildFiltro({

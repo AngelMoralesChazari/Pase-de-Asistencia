@@ -14,7 +14,7 @@ dependencies:
   firebase_core: ^3.15.2
   firebase_database: ^11.3.3
   firebase_auth: ^5.7.0
-  google_sign_in: ^7.1.1
+  google_sign_in: ^6.1.5
   intl: ^0.20.2
 
 
@@ -29,4 +29,5 @@ flutter:
     - assets/images/fondo.jpg
     - assets/images/login.jpg
     - assets/images/inicio.jpg
+    - assets/images/google_logo.png
     - assets/supervisores.json

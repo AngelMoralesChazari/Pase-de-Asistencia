@@ -1,16 +1,12 @@
-//2.- Pantalla de Inicio de Sesion(Correo)
-
-import 'package:pase_de_asistencia/screens/home_screen.dart'; // Asegúrate que la ruta sea correcta
+// Pantalla de Inicio de Sesión con autenticación manual + Google
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pase_de_asistencia/screens/home_screen.dart';
 import 'dart:convert';
 
-//autenticacion via correo
+// Firebase y Google
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-
-bool _isGoogleSignIn = false;
-String? _errorMessage;
 
 class LoginFormScreen extends StatefulWidget {
   const LoginFormScreen({super.key});
@@ -30,7 +26,8 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
 
   Future<List<Map<String, dynamic>>> _loadSupervisores() async {
     try {
-      final String jsonString = await rootBundle.loadString('assets/supervisores.json');
+      final String jsonString =
+      await rootBundle.loadString('assets/supervisores.json');
       final List<dynamic> jsonData = json.decode(jsonString);
       return jsonData.cast<Map<String, dynamic>>();
     } catch (e) {
@@ -71,7 +68,7 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
       if (supervisorValido && mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()), // Ahora usa HomeScreen
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       } else {
         setState(() => _errorMessage = 'Credenciales incorrectas');
@@ -81,6 +78,43 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
       debugPrint('Error en login: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return;
+
+      final GoogleSignInAuthentication googleAuth =
+      await googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential =
+      await FirebaseAuth.instance.signInWithCredential(credential);
+      final userEmail = userCredential.user?.email;
+
+      final supervisores = await _loadSupervisores();
+      final isAutorizado =
+      supervisores.any((sup) => sup['email'] == userEmail);
+
+      if (isAutorizado && mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      } else {
+        await FirebaseAuth.instance.signOut();
+        await GoogleSignIn().signOut();
+        setState(() => _errorMessage = 'Correo no autorizado');
+      }
+    } catch (e) {
+      setState(() => _errorMessage = 'Error con Google Sign-In');
+      debugPrint('Google Sign-In error: $e');
     }
   }
 
@@ -96,7 +130,7 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     double formPosition = keyboardHeight > 0
-        ? screenHeight - keyboardHeight - 320
+        ? screenHeight - keyboardHeight - 340
         : screenHeight * 0.40;
     formPosition = formPosition.clamp(0.0, screenHeight * 0.40);
 
@@ -113,7 +147,6 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
               },
             ),
           ),
-
           AnimatedPositioned(
             duration: const Duration(milliseconds: 50),
             curve: Curves.easeOut,
@@ -139,7 +172,6 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
                 child: Form(
                   key: _formKey,
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text(
                         'INICIAR SESIÓN',
@@ -151,14 +183,13 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
                           labelText: 'Correo Electrónico',
                           labelStyle: const TextStyle(
-                            color: Colors.blueGrey
+                            color: Colors.grey,
                           ),
                           hintText: 'Ingrese su correo',
                           hintStyle: const TextStyle(
@@ -166,10 +197,10 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
                           ),
                           prefixIcon: const Icon(Icons.email),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(
-                                color: Color(0xFF193863),
-                                width: 2.0
+                              color: Color(0xFF193863),
+                              width: 2.0,
                             ),
                           ),
                           border: OutlineInputBorder(
@@ -177,63 +208,15 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
                             borderSide: BorderSide(color: Colors.blueAccent),
                           ),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Ingrese su correo';
-                          }
-                          if (!value.contains('@')) {
-                            return 'Correo inválido';
-                          }
-                          return null;
-                        },
+                        validator: _validarCorreo,
                       ),
                       const SizedBox(height: 20),
-
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        decoration: InputDecoration(
-                          labelText: 'Contraseña',
-                          labelStyle: const TextStyle(
-                              color: Colors.blueGrey
-                          ),
-                          hintText: 'Ingrese su contraseña',
-                          hintStyle: const TextStyle(
-                            color: Colors.grey,
-                          ),
-                          prefixIcon: const Icon(Icons.lock),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
-                                color: Color(0xFF193863),
-                                width: 2.0
-                            ),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                            ),
-                            onPressed: () => setState(
-                                    () => _obscurePassword = !_obscurePassword
-                            ),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Ingrese su contraseña';
-                          }
-                          if (value.length < 6) {
-                            return 'Mínimo 6 caracteres';
-                          }
-                          return null;
-                        },
+                        decoration: _inputDecorationConToggle(),
+                        validator: _validarContrasena,
                       ),
-
                       if (_errorMessage != null) ...[
                         const SizedBox(height: 15),
                         Text(
@@ -244,31 +227,50 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
                           ),
                         ),
                       ],
-
                       const SizedBox(height: 30),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _submitForm,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF193863),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _submitForm,
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 50),
+                          backgroundColor: const Color(0xFF193863),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          child: _isLoading
-                              ? const CircularProgressIndicator(
+                        ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text(
+                          'INGRESAR',
+                          style: TextStyle(
+                            fontSize: 20,
                             color: Colors.white,
-                          )
-                              : const Text(
-                            'INGRESAR',
-                            style: TextStyle(
-                              fontSize: 20,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 2.5,
-                            ),
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 2.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      //const Text("Inicia Sesión con Google"),
+                      const SizedBox(height: 0.8),
+                      OutlinedButton.icon(
+                        icon: Image.asset(
+                          'assets/images/google_logo.png',
+                          height: 24,
+                          width: 24,
+                        ),
+                        label: const Text(
+                          "Continuar con Google",
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        onPressed: _signInWithGoogle,
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 50),
+                          side: const BorderSide(color: Colors.grey),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                       ),
@@ -281,5 +283,56 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
         ],
       ),
     );
+  }
+
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecorationConToggle() {
+    return InputDecoration(
+      labelText: 'Contraseña',
+      labelStyle: const TextStyle(
+        color: Colors.grey
+      ),
+      hintText: 'Ingrese su contraseña',
+      hintStyle: const TextStyle(
+        color: Colors.grey,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(
+          color: Color(0xFF193863),
+          width: 2.0,
+        ),
+      ),
+      prefixIcon: const Icon(Icons.lock),
+      suffixIcon: IconButton(
+        icon: Icon(
+            _obscurePassword ? Icons.visibility_off : Icons.visibility),
+        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+    );
+  }
+
+  String? _validarCorreo(String? value) {
+    if (value == null || value.isEmpty) return 'Ingrese su correo';
+    if (!value.contains('@')) return 'Correo inválido';
+    return null;
+  }
+
+  String? _validarContrasena(String? value) {
+    if (value == null || value.isEmpty) return 'Ingrese su contraseña';
+    if (value.length < 6) return 'Mínimo 6 caracteres';
+    return null;
   }
 }

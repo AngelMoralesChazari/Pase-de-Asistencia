@@ -1,14 +1,13 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
 }
 
 android {
     namespace = "com.example.pase_de_asistencia"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = flutter.compileSdkVersion.toInt()
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -21,31 +20,35 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // Solución 1: Usa mutableMapOf directamente
+        manifestPlaceholders += mutableMapOf(
+            "appAuthRedirectScheme" to "com.googleusercontent.apps.200627463961"
+        )
+
+        // Solución alternativa 2 (si la anterior falla):
+        // manifestPlaceholders = mapOf(
+        //     "appAuthRedirectScheme" to "com.googleusercontent.apps.200627463961"
+        // ).toMutableMap()
+
         applicationId = "com.example.pase_de_asistencia"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 23
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
+        targetSdk = flutter.targetSdkVersion.toInt()
+        versionCode = flutter.versionCode.toInt()
         versionName = flutter.versionName
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
 }
 
 dependencies {
-    add("implementation", platform("com.google.firebase:firebase-bom:32.2.0"))
-    add("implementation", "com.google.firebase:firebase-auth")
-    add("implementation", "com.google.android.gms:play-services-auth:20.7.0")
+    implementation(platform("com.google.firebase:firebase-bom:32.2.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
 }
-
 
 flutter {
     source = "../.."

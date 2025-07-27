@@ -1,7 +1,10 @@
+//Pantalla de Inicio (Busqueda)
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +21,40 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _filtro2Seleccionado;
 
   List<Map<dynamic, dynamic>> _resultados = [];
+
+  //Confirmar Salida
+  Future<bool> _confirmarSalida() async {
+    final bool? exit = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[200],
+        title: const Text('Confirmar Salida'),
+        content: const Text('¿Estás seguro de que quieres cerrar sesión?'),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+              //backgroundColor: Colors.grey[200],
+            ),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.blueAccent,
+              //backgroundColor: Colors.grey[200],
+            ),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              Navigator.of(context).pop(true);
+            },
+            child: const Text('Salir'),
+          ),
+        ],
+      ),
+    );
+    return exit ?? false;
+  }
 
   @override
   void initState() {
@@ -188,128 +225,129 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Fondo
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/inicio.jpg',
-              fit: BoxFit.cover,
-            ),
-          ),
-
-          // Contenido interactivo
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  SizedBox(height: 125),
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: 120,
-                        child: _buildFiltro(
-                          value: _filtro1Seleccionado,
-                          opciones: _opcionesFiltro1,
-                          hint: 'Edificio',
-                          onChanged: (value) {
-                            setState(() => _filtro1Seleccionado = value);
-                          },
-                        ),
-                      ),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: _buildFiltro(
-                          value: _filtro2Seleccionado,
-                          opciones: _opcionesFiltro2,
-                          hint: 'Hora',
-                          onChanged: (value) {
-                            setState(() => _filtro2Seleccionado = value);
-                          },
-                        ),
-                      ),
-                      SizedBox(width: 10),
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: Colors.blue,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: IconButton(
-                          icon: Icon(Icons.search, color: Colors.white),
-                          onPressed: buscarClases,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  if (_resultados.isNotEmpty)
-                    Expanded(
-                      child: Container(
-                        padding: EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.95),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: ListView(
-                          children: _resultados.map((clase) {
-                            return Card(
-                              margin: EdgeInsets.only(bottom: 13),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  side: BorderSide(
-                                    color: Colors.grey.withOpacity(0.3),
-                                    width: 1.0,
-                                  )),
-                              child: ExpansionTile(
-                                title: Text(
-                                  clase["profe"],
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                collapsedBackgroundColor: Colors.white,
-                                backgroundColor: Colors.grey[200],
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadiusGeometry.circular(8),
-                                ),
-                                collapsedShape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadiusGeometry.circular(8),
-                                ),
-                                children: [
-                                  Padding(
-                                    padding:
-                                    EdgeInsets.symmetric(horizontal: 16),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                      children: [
-                                        _buildInfoRow('Horario:', clase["horario"]),
-                                        _buildInfoRow('Aula:', clase["aula"]),
-                                        _buildInfoRow('Grupo:', clase["grupo"]),
-                                        _buildInfoRow('Materia:', clase["materia"]),
-                                        SizedBox(height: 10),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-                ],
+    return WillPopScope(
+      onWillPop: _confirmarSalida,
+      child: Scaffold(
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/inicio.jpg',
+                fit: BoxFit.cover,
               ),
             ),
-          ),
-        ],
+
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    SizedBox(height: 125),
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 120,
+                          child: _buildFiltro(
+                            value: _filtro1Seleccionado,
+                            opciones: _opcionesFiltro1,
+                            hint: 'Edificio',
+                            onChanged: (value) {
+                              setState(() => _filtro1Seleccionado = value);
+                            },
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: _buildFiltro(
+                            value: _filtro2Seleccionado,
+                            opciones: _opcionesFiltro2,
+                            hint: 'Hora',
+                            onChanged: (value) {
+                              setState(() => _filtro2Seleccionado = value);
+                            },
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: Colors.blue,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: IconButton(
+                            icon: Icon(Icons.search, color: Colors.white),
+                            onPressed: buscarClases,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    if (_resultados.isNotEmpty)
+                      Expanded(
+                        child: Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ListView(
+                            children: _resultados.map((clase) {
+                              return Card(
+                                margin: EdgeInsets.only(bottom: 13),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    side: BorderSide(
+                                      color: Colors.grey.withOpacity(0.3),
+                                      width: 1.0,
+                                    )),
+                                child: ExpansionTile(
+                                  title: Text(
+                                    clase["profe"],
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  collapsedBackgroundColor: Colors.white,
+                                  backgroundColor: Colors.grey[200],
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadiusGeometry.circular(8),
+                                  ),
+                                  collapsedShape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadiusGeometry.circular(8),
+                                  ),
+                                  children: [
+                                    Padding(
+                                      padding:
+                                      EdgeInsets.symmetric(horizontal: 16),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                        children: [
+                                          _buildInfoRow('Horario:', clase["horario"]),
+                                          _buildInfoRow('Aula:', clase["aula"]),
+                                          _buildInfoRow('Grupo:', clase["grupo"]),
+                                          _buildInfoRow('Materia:', clase["materia"]),
+                                          SizedBox(height: 10),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

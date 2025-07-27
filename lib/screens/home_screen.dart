@@ -16,11 +16,38 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<String> _opcionesFiltro1 = [];
   List<String> _opcionesFiltro2 = [];
+  List<String> _todasLasHoras = [];
+
+  String? _turnoSeleccionado;
+  final List<String> _opcionesTurno = ['AM', 'PM'];
 
   String? _filtro1Seleccionado;
   String? _filtro2Seleccionado;
 
   List<Map<dynamic, dynamic>> _resultados = [];
+
+  List<String> filtrarHorasPorTurno(String turno, List<String> todasLasHoras) {
+    return todasLasHoras.where((hora) {
+      final partes = hora.split(' a ');
+      if (partes.length != 2) return false;
+
+      final horaInicio = partes[0];
+      final partesHora = horaInicio.split(':');
+      if (partesHora.length != 2) return false;
+
+      final horaNum = int.tryParse(partesHora[0]) ?? 0;
+
+      if (turno == 'AM') {
+        return horaNum < 12;
+      } else if (turno == 'PM') {
+        return horaNum >= 12;
+      }
+
+      return false;
+    }).toList();
+  }
+
+
 
   //Confirmar Salida
   Future<bool> _confirmarSalida() async {
@@ -127,6 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _opcionesFiltro1 = edificiosFinales;
         _opcionesFiltro2 = horasFinales;
+        _todasLasHoras = horasFinales;
       });
     }
   }
@@ -248,6 +276,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(height: 125),
                     Row(
                       children: [
+                        //Configuracion Turno
+                        SizedBox(
+                          width: 80,
+                          child: _buildFiltro(
+                            value: _turnoSeleccionado,
+                            opciones: _opcionesTurno,
+                            hint: 'Turno',
+                            onChanged: (value) {
+                              setState((){
+                                _turnoSeleccionado = value;
+                                _opcionesFiltro2 = value != null
+                                    ? filtrarHorasPorTurno(value, _todasLasHoras)
+                                    : [];
+                                _filtro2Seleccionado = null;
+                              });
+                            },
+                          ),
+                        ),
+                        SizedBox(width: 10),
+
+                        //Configuracion Edificio
                         SizedBox(
                           width: 120,
                           child: _buildFiltro(

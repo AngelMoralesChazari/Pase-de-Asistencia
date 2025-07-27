@@ -2,9 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:pase_de_asistencia/screens/login_form_screen.dart';
+import 'package:pase_de_asistencia/services/auth_service.dart';
 
 class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
+  LoginScreen({super.key});
 
   void _navigateWithSmoothTransition(BuildContext context) {
     Navigator.push(
@@ -44,8 +45,7 @@ class LoginScreen extends StatelessWidget {
                   opacity: Tween(begin: 0.0, end: 1.0).animate(
                     CurvedAnimation(
                       parent: animation,
-                      curve:
-                      const Interval(0.3, 1.0, curve: Curves.easeOut),
+                      curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
                     ),
                   ),
                   child: child,
@@ -63,22 +63,17 @@ class LoginScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Imagen de fondo
           Positioned.fill(
             child: Image.asset(
               'assets/images/fondo.jpg',
               fit: BoxFit.cover,
             ),
           ),
-
-          // 2. Contenido superpuesto
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 100),
-
-                // Botón de inicio de sesión normal
                 ElevatedButton(
                   onPressed: () => _navigateWithSmoothTransition(context),
                   style: ElevatedButton.styleFrom(
@@ -102,7 +97,6 @@ class LoginScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-
               ],
             ),
           ),

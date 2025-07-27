@@ -83,25 +83,47 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return;
+      //1.- Cerrar cualquier sesion previa
+      await GoogleSignIn().signOut();
+      await FirebaseAuth.instance.signOut();
 
-      final GoogleSignInAuthentication googleAuth =
-      await googleUser.authentication;
+      //2.- Iniciar el flujo de autenticacion
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: ['email', 'profile'],
+      );
 
+      //Cierra sesión previa para forzar seleccion de cuenta
+      await googleSignIn.signOut();
+      //final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      //3.- Obtener el token de autenticacion
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      //4.- Crear credenciales para Firebase
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      final userCredential =
-      await FirebaseAuth.instance.signInWithCredential(credential);
-      final userEmail = userCredential.user?.email;
+      //5.- Autenticar con Firebase
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
 
+      //6.- Verificar si el usuario es autorizado
+      final userEmail = userCredential.user?.email;
       final supervisores = await _loadSupervisores();
-      final isAutorizado =
-      supervisores.any((sup) => sup['email'] == userEmail);
+      final isAutorizado = supervisores.any((sup) => sup['email'] == userEmail);
 
       if (isAutorizado && mounted) {
         Navigator.pushReplacement(
@@ -111,10 +133,20 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
       } else {
         await FirebaseAuth.instance.signOut();
         await GoogleSignIn().signOut();
-        setState(() => _errorMessage = 'Correo no autorizado');
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Correo no Autorizado';
+            _isLoading = false;
+          });
+        }
       }
     } catch (e) {
-      setState(() => _errorMessage = 'Error con Google Sign-In');
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error en autenticación con Google';
+          _isLoading = false;
+        });
+      }
       debugPrint('Google Sign-In error: $e');
     }
   }

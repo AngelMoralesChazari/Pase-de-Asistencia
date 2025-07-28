@@ -14,6 +14,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  Map<String, String> _asistenciasRegistradas = {};
   bool _busquedaRealizada = false;
   bool _cargando = false;
   List<String> _opcionesFiltro1 = [];
@@ -547,13 +548,16 @@ class _HomeScreenState extends State<HomeScreen> {
       final fechaActual =
           "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
-      // 2. Crear una clave única para el registro de asistencia
-      // Reemplazamos espacios y caracteres especiales en el horario para la clave
+      // 2. Crear la clave única para el registro de asistencia (¡AGREGA ESTO!)
       final horarioParaClave = clase["horario"]
           .toString()
           .replaceAll(' ', '-')
           .replaceAll(':', '');
       final claveRegistro = "${clase["profeid"]}_$horarioParaClave";
+
+      //Deshabilita los botones de asistencia si ya se registró
+      final asistenciaRegistrada = _asistenciasRegistradas[claveRegistro];
+      final botonesDeshabilitados = asistenciaRegistrada != null;
 
       // 3. Definir la ruta donde se guardará la asistencia
       final asistenciaRef = ref
@@ -577,6 +581,10 @@ class _HomeScreenState extends State<HomeScreen> {
       // 5. Guardar los datos en Firebase
       await asistenciaRef.set(datosAsistencia);
 
+      setState(() {
+        _asistenciasRegistradas[claveRegistro] = estadoAsistencia;
+      });
+
       // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -597,8 +605,6 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
   }
-
-  // --- FIN DEL NUEVO CÓDIGO ---
 
   Widget _buildFiltro({
     required String? value,
@@ -797,6 +803,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ) {
                                   if (index < _resultados.length) {
                                     final clase = _resultados[index];
+                                    final horarioParaClave = clase["horario"]
+                                        .toString()
+                                        .replaceAll(' ', '-')
+                                        .replaceAll(':', '');
+                                    final claveRegistro =
+                                        "${clase["profeid"]}_$horarioParaClave";
+                                    final asistenciaRegistrada =
+                                        _asistenciasRegistradas[claveRegistro];
+                                    final botonesDeshabilitados =
+                                        asistenciaRegistrada != null;
+
                                     return Card(
                                       margin: const EdgeInsets.only(bottom: 13),
                                       shape: RoundedRectangleBorder(
@@ -855,92 +872,119 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   clase["materia"],
                                                 ),
                                                 const SizedBox(height: 10),
-                                                Wrap(
-                                                  alignment:
-                                                      WrapAlignment.center,
-                                                  spacing: 16,
-                                                  runSpacing: 8,
-                                                  children: [
-                                                    ElevatedButton.icon(
-                                                      onPressed: () {
-                                                        _registrarAsistencia(
-                                                          clase,
-                                                          "asistio",
-                                                        );
-                                                      },
-                                                      icon: const Icon(
-                                                        Icons.check_circle,
-                                                        color: Colors.white,
-                                                        size: 20,
-                                                      ),
-                                                      label: const Text(
-                                                        'Asistió',
-                                                        style: TextStyle(
-                                                          fontSize: 17,
-                                                          fontWeight:
-                                                              FontWeight.w800,
-                                                          letterSpacing: 0.5,
+                                                if (botonesDeshabilitados)
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          vertical: 8.0,
                                                         ),
-                                                      ),
-                                                      style: ElevatedButton.styleFrom(
-                                                        backgroundColor:
-                                                            Colors.green,
-                                                        foregroundColor:
-                                                            Colors.white,
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 20,
-                                                              vertical: 10,
-                                                            ),
-                                                        shape: RoundedRectangleBorder(
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                10,
-                                                              ),
-                                                        ),
+                                                    child: Text(
+                                                      'Asistencia Registrada: ${asistenciaRegistrada == "asistio" ? "Asistió" : "Faltó"}',
+                                                      style: TextStyle(
+                                                        color:
+                                                            asistenciaRegistrada ==
+                                                                "asistio"
+                                                            ? Colors.green
+                                                            : Colors.red,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 16,
                                                       ),
                                                     ),
-                                                    ElevatedButton.icon(
-                                                      onPressed: () {
-                                                        _registrarAsistencia(
-                                                          clase,
-                                                          "falto",
-                                                        );
-                                                      },
-                                                      icon: const Icon(
-                                                        Icons.cancel,
-                                                        color: Colors.white,
-                                                        size: 20,
-                                                      ),
-                                                      label: const Text(
-                                                        'Faltó',
-                                                        style: TextStyle(
-                                                          fontSize: 17,
-                                                          fontWeight:
-                                                              FontWeight.w800,
-                                                          letterSpacing: 0.5,
+                                                  )
+                                                else
+                                                  Wrap(
+                                                    alignment:
+                                                        WrapAlignment.center,
+                                                    spacing: 16,
+                                                    runSpacing: 8,
+                                                    children: [
+                                                      ElevatedButton.icon(
+                                                        onPressed:
+                                                            botonesDeshabilitados
+                                                            ? null
+                                                            : () {
+                                                                _registrarAsistencia(
+                                                                  clase,
+                                                                  "asistio",
+                                                                );
+                                                              },
+                                                        icon: const Icon(
+                                                          Icons.check_circle,
+                                                          color: Colors.white,
+                                                          size: 20,
                                                         ),
-                                                      ),
-                                                      style: ElevatedButton.styleFrom(
-                                                        backgroundColor:
-                                                            Colors.red,
-                                                        foregroundColor:
-                                                            Colors.white,
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 20,
-                                                              vertical: 10,
-                                                            ),
-                                                        shape: RoundedRectangleBorder(
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                10,
+                                                        label: const Text(
+                                                          'Asistió',
+                                                          style: TextStyle(
+                                                            fontSize: 17,
+                                                            fontWeight:
+                                                                FontWeight.w800,
+                                                            letterSpacing: 0.5,
+                                                          ),
+                                                        ),
+                                                        style: ElevatedButton.styleFrom(
+                                                          backgroundColor:
+                                                              Colors.green,
+                                                          foregroundColor:
+                                                              Colors.white,
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 20,
+                                                                vertical: 10,
                                                               ),
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  10,
+                                                                ),
+                                                          ),
                                                         ),
                                                       ),
-                                                    ),
-                                                  ],
-                                                ),
+                                                      ElevatedButton.icon(
+                                                        onPressed:
+                                                            botonesDeshabilitados
+                                                            ? null
+                                                            : () {
+                                                                _registrarAsistencia(
+                                                                  clase,
+                                                                  "falto",
+                                                                );
+                                                              },
+                                                        icon: const Icon(
+                                                          Icons.cancel,
+                                                          color: Colors.white,
+                                                          size: 20,
+                                                        ),
+                                                        label: const Text(
+                                                          'Faltó',
+                                                          style: TextStyle(
+                                                            fontSize: 17,
+                                                            fontWeight:
+                                                                FontWeight.w800,
+                                                            letterSpacing: 0.5,
+                                                          ),
+                                                        ),
+                                                        style: ElevatedButton.styleFrom(
+                                                          backgroundColor:
+                                                              Colors.red,
+                                                          foregroundColor:
+                                                              Colors.white,
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 20,
+                                                                vertical: 10,
+                                                              ),
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  10,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 const SizedBox(height: 10),
                                               ],
                                             ),

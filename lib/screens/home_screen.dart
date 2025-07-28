@@ -109,7 +109,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void _setDiaActual() {
     final now = DateTime.now();
     const dias = [
-      'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'
+      'Lunes',
+      'Martes',
+      'Miércoles',
+      'Jueves',
+      'Viernes',
+      'Sábado',
     ];
     setState(() {
       if (now.weekday >= 1 && now.weekday <= 6) {
@@ -124,7 +129,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final app = Firebase.app();
     final database = FirebaseDatabase.instanceFor(
       app: app,
-      databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+      databaseURL:
+          'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
     );
 
     final ref = database.ref();
@@ -153,7 +159,10 @@ class _HomeScreenState extends State<HomeScreen> {
           }
           if (clase['B'] != null) {
             final horaCruda = clase['B'].toString().trim();
-            if (horaCruda.contains(':') && horaCruda.length >= 4 && horaCruda != '00:00' && horaCruda != '--') {
+            if (horaCruda.contains(':') &&
+                horaCruda.length >= 4 &&
+                horaCruda != '00:00' &&
+                horaCruda != '--') {
               final partes = horaCruda.split(' a ');
               if (partes.isNotEmpty) {
                 String horaInicio = partes[0].trim();
@@ -165,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       final edificiosFinales =
-      edificiosNumericos.map((e) => "Edificio $e").toList()..sort();
+          edificiosNumericos.map((e) => "Edificio $e").toList()..sort();
 
       final horasFinales = horas.toList()
         ..sort((a, b) {
@@ -184,11 +193,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<List<String>> _filtrarHorasPorEdificio(String edificioSeleccionado) async {
+  Future<List<String>> _filtrarHorasPorEdificio(
+    String edificioSeleccionado,
+  ) async {
     final app = Firebase.app();
     final database = FirebaseDatabase.instanceFor(
       app: app,
-      databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+      databaseURL:
+          'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
     );
 
     final ref = database.ref();
@@ -215,7 +227,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
             if (edificio == edificioSeleccionado) {
               // Extraer hora de inicio válida
-              if (hora.contains(':') && hora.length >= 4 && hora != '00:00' && hora != '--') {
+              if (hora.contains(':') &&
+                  hora.length >= 4 &&
+                  hora != '00:00' &&
+                  hora != '--') {
                 final partes = hora.split(' a ');
                 if (partes.isNotEmpty) {
                   String horaInicio = partes[0].trim();
@@ -277,7 +292,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final app = Firebase.app();
     final database = FirebaseDatabase.instanceFor(
       app: app,
-      databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+      databaseURL:
+          'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
     );
 
     final ref = database.ref();
@@ -297,7 +313,9 @@ class _HomeScreenState extends State<HomeScreen> {
         if (clase is Map) {
           final aula = clase['A']?.toString() ?? '';
           final hora = clase['B']?.toString() ?? '';
-          String edificio = aula.length >= 1 ? "Edificio ${aula.substring(0, 1)}" : '';
+          String edificio = aula.length >= 1
+              ? "Edificio ${aula.substring(0, 1)}"
+              : '';
 
           // Filtrar por edificio
           if (edificio != _filtro1Seleccionado) return false;
@@ -316,11 +334,15 @@ class _HomeScreenState extends State<HomeScreen> {
           }
 
           // Filtrar por hora seleccionada
-          if (_filtro2Seleccionado != null && horaInicio != _filtro2Seleccionado) return false;
+          if (_filtro2Seleccionado != null &&
+              horaInicio != _filtro2Seleccionado)
+            return false;
 
           // Filtrar por día con normalización de tildes
           if (_diaActual != null) {
-            String diaClase = quitarTildes(clase['C']?.toString().trim().toLowerCase() ?? '');
+            String diaClase = quitarTildes(
+              clase['C']?.toString().trim().toLowerCase() ?? '',
+            );
             String diaActual = quitarTildes(_diaActual!.trim().toLowerCase());
             if (diaClase != diaActual) return false;
           }
@@ -420,10 +442,13 @@ class _HomeScreenState extends State<HomeScreen> {
             claseActual['dia'] == siguienteClase['dia'] &&
             claseActual['aula'] == siguienteClase['aula'] &&
             claseActual['materia'] == siguienteClase['materia']) {
-
           // Verificar si las horas son consecutivas
-          String horaFinAnterior = _parseHoraFin(clasesConsecutivas.last['horario']);
-          String horaInicioSiguiente = _parseHoraInicio(siguienteClase['horario']);
+          String horaFinAnterior = _parseHoraFin(
+            clasesConsecutivas.last['horario'],
+          );
+          String horaInicioSiguiente = _parseHoraInicio(
+            siguienteClase['horario'],
+          );
 
           if (_sonHorasConsecutivas(horaFinAnterior, horaInicioSiguiente)) {
             clasesConsecutivas.add(siguienteClase);
@@ -459,19 +484,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return resultado;
   }
 
-// Función auxiliar para extraer la hora de inicio
+  // Función auxiliar para extraer la hora de inicio
   String _parseHoraInicio(String horario) {
     final partes = horario.split(' a ');
     return partes.isNotEmpty ? partes[0].trim() : '';
   }
 
-// Función auxiliar para extraer la hora de fin
+  // Función auxiliar para extraer la hora de fin
   String _parseHoraFin(String horario) {
     final partes = horario.split(' a ');
     return partes.length > 1 ? partes[1].trim() : '';
   }
 
-// Función auxiliar para verificar si dos horas son consecutivas
+  // Función auxiliar para verificar si dos horas son consecutivas
   bool _sonHorasConsecutivas(String horaFin, String horaInicio) {
     try {
       // Convertir horas a minutos para comparar
@@ -486,7 +511,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-// Función auxiliar para convertir hora en formato "HH:MM" a minutos
+  // Función auxiliar para convertir hora en formato "HH:MM" a minutos
   int _convertirHoraAMinutos(String hora) {
     final partes = hora.split(':');
     if (partes.length != 2) return 0;
@@ -499,7 +524,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // --- Funciones de asistencias ---
 
-  Future<void> _registrarAsistencia(Map<dynamic, dynamic> clase, String estadoAsistencia) async {
+  Future<void> _registrarAsistencia(
+    Map<dynamic, dynamic> clase,
+    String estadoAsistencia,
+  ) async {
     setState(() {
       _cargando = true; // Muestra el indicador de carga
     });
@@ -508,22 +536,30 @@ class _HomeScreenState extends State<HomeScreen> {
       final app = Firebase.app();
       final database = FirebaseDatabase.instanceFor(
         app: app,
-        databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+        databaseURL:
+            'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
       );
 
       final ref = database.ref();
 
       // 1. Obtener la fecha actual en formato YYYY-MM-DD
       final now = DateTime.now();
-      final fechaActual = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final fechaActual =
+          "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
       // 2. Crear una clave única para el registro de asistencia
       // Reemplazamos espacios y caracteres especiales en el horario para la clave
-      final horarioParaClave = clase["horario"].toString().replaceAll(' ', '-').replaceAll(':', '');
+      final horarioParaClave = clase["horario"]
+          .toString()
+          .replaceAll(' ', '-')
+          .replaceAll(':', '');
       final claveRegistro = "${clase["profeid"]}_$horarioParaClave";
 
       // 3. Definir la ruta donde se guardará la asistencia
-      final asistenciaRef = ref.child('asistencias').child(fechaActual).child(claveRegistro);
+      final asistenciaRef = ref
+          .child('asistencias')
+          .child(fechaActual)
+          .child(claveRegistro);
 
       // 4. Crear el objeto de datos a guardar
       final datosAsistencia = {
@@ -534,7 +570,8 @@ class _HomeScreenState extends State<HomeScreen> {
         'grupo': clase["grupo"],
         'materia': clase["materia"],
         'horario': clase["horario"],
-        'timestamp': ServerValue.timestamp, // Guarda la hora exacta del servidor de Firebase
+        'timestamp': ServerValue.timestamp,
+        // Guarda la hora exacta del servidor de Firebase
       };
 
       // 5. Guardar los datos en Firebase
@@ -542,9 +579,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Asistencia de ${clase["profe"]} registrada como "$estadoAsistencia"')),
+        SnackBar(
+          content: Text(
+            'Asistencia de ${clase["profe"]} registrada como "$estadoAsistencia"',
+          ),
+        ),
       );
-
     } catch (e) {
       // Mostrar mensaje de error
       ScaffoldMessenger.of(context).showSnackBar(
@@ -558,7 +598,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-// --- FIN DEL NUEVO CÓDIGO ---
+  // --- FIN DEL NUEVO CÓDIGO ---
 
   Widget _buildFiltro({
     required String? value,
@@ -569,7 +609,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return DropdownButtonFormField<String>(
       value: value,
       decoration: InputDecoration(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 14,
+        ),
         hintText: hint,
         filled: true,
         fillColor: Colors.white.withOpacity(0.9),
@@ -590,10 +633,7 @@ class _HomeScreenState extends State<HomeScreen> {
       icon: Icon(Icons.arrow_drop_down, color: Colors.grey[700]),
       dropdownColor: Colors.grey[200],
       items: opciones.map((opcion) {
-        return DropdownMenuItem<String>(
-          value: opcion,
-          child: Text(opcion),
-        );
+        return DropdownMenuItem<String>(value: opcion, child: Text(opcion));
       }).toList(),
       onChanged: onChanged,
     );
@@ -607,10 +647,7 @@ class _HomeScreenState extends State<HomeScreen> {
         body: Stack(
           children: [
             Positioned.fill(
-              child: Image.asset(
-                'assets/images/inicio.jpg',
-                fit: BoxFit.cover,
-              ),
+              child: Image.asset('assets/images/inicio.jpg', fit: BoxFit.cover),
             ),
 
             SafeArea(
@@ -635,10 +672,17 @@ class _HomeScreenState extends State<HomeScreen> {
                               });
 
                               // Si hay edificio seleccionado, actualizar horas por edificio y turno
-                              if (_filtro1Seleccionado != null && value != null) {
-                                final horasDelEdificio = await _filtrarHorasPorEdificio(_filtro1Seleccionado!);
+                              if (_filtro1Seleccionado != null &&
+                                  value != null) {
+                                final horasDelEdificio =
+                                    await _filtrarHorasPorEdificio(
+                                      _filtro1Seleccionado!,
+                                    );
                                 setState(() {
-                                  _opcionesFiltro2 = filtrarHorasPorTurno(value, horasDelEdificio);
+                                  _opcionesFiltro2 = filtrarHorasPorTurno(
+                                    value,
+                                    horasDelEdificio,
+                                  );
                                 });
                               } else {
                                 setState(() {
@@ -665,7 +709,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
                               // Filtrar horas por edificio seleccionado
                               if (value != null) {
-                                final horasDelEdificio = await _filtrarHorasPorEdificio(value);
+                                final horasDelEdificio =
+                                    await _filtrarHorasPorEdificio(value);
                                 setState(() {
                                   _opcionesFiltro2 = horasDelEdificio;
                                 });
@@ -704,8 +749,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 3),
 
+                    // Mostrar el texto solo si hay resultados
                     if (_resultados.isNotEmpty)
                       Expanded(
                         child: Container(
@@ -714,142 +760,244 @@ class _HomeScreenState extends State<HomeScreen> {
                             color: Colors.white.withOpacity(0.95),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: ListView(
-                            key: ValueKey(_busquedaKey),
-                            children: _resultados.map((clase) {
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 13),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    side: BorderSide(
-                                      color: Colors.grey.withOpacity(0.3),
-                                      width: 1.0,
-                                    )),
-                                child: ExpansionTile(
-                                  key:
-                                  ValueKey('$_expansionTileKey-${clase["profe"]}-${clase["aula"]}-${clase["horario"]}'),
-                                  title: Text(
-                                    clase["profe"],
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                          child: CustomScrollView(
+                            slivers: [
+                              // El header que se mueve con el scroll
+                              SliverPersistentHeader(
+                                pinned: false,
+                                floating: false,
+                                delegate: _HeaderDelegate(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(
+                                      left: 4.0,
+                                      bottom: 8.0,
                                     ),
-                                  ),
-                                  collapsedBackgroundColor: Colors.white,
-                                  backgroundColor: Colors.grey[200],
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  collapsedShape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          _buildInfoRow('Horario:', clase["horario"]),
-                                          _buildInfoRow('Aula:', clase["aula"]),
-                                          _buildInfoRow('Grupo:', clase["grupo"]),
-                                          _buildInfoRow('Materia:', clase["materia"]),
-                                          const SizedBox(height: 10),
-
-                                          //Botones de Asistencia
-                                          //Botones de Asistencia
-                                          Wrap(
-                                            alignment: WrapAlignment.center,
-                                            spacing: 16,
-                                            runSpacing: 8,
-                                            children: [
-                                              ElevatedButton.icon(
-                                                onPressed: () {
-                                                  _registrarAsistencia(clase, "asistio");
-                                                },
-                                                icon: const Icon(
-                                                  Icons.check_circle,
-                                                  color: Colors.white,
-                                                  size: 20,
-                                                ),
-                                                label: const Text(
-                                                  'Asistió',
-                                                  style: TextStyle(
-                                                    fontSize: 17,
-                                                    fontWeight: FontWeight.w800,
-                                                    letterSpacing: 0.5,
-                                                  ),
-                                                ),
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.green,
-                                                  foregroundColor: Colors.white,
-                                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(10),
-                                                  ),
-                                                ),
-                                              ),
-                                              ElevatedButton.icon(
-                                                onPressed: () {
-                                                  _registrarAsistencia(clase, "falto");
-                                                },
-                                                icon: const Icon(
-                                                  Icons.cancel,
-                                                  color: Colors.white,
-                                                  size: 20,
-                                                ),
-                                                label: const Text(
-                                                  'Faltó',
-                                                  style: TextStyle(
-                                                    fontSize: 17,
-                                                    fontWeight: FontWeight.w800,
-                                                    letterSpacing: 0.5,
-                                                  ),
-                                                ),
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.red,
-                                                  foregroundColor: Colors.white,
-                                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(10),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 10),
-                                        ],
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        'Pendientes Por Revisar',
+                                        style: const TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF193863),
+                                          letterSpacing: 1.1,
+                                        ),
                                       ),
                                     ),
-                                  ],
+                                  ),
+                                  minHeight: 40,
+                                  maxHeight: 40,
                                 ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      )
-                    else if (_busquedaRealizada && !_cargando)
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.topCenter,
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 200),
-                            child: Text(
-                              _diaActual == null
-                                  ? 'No hay clases este día.'
-                                  : 'No se encontraron clases con esos filtros.',
-                              style: const TextStyle(
-                                fontSize: 22,
-                                color: Colors.black,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 1.2,
                               ),
-                              textAlign: TextAlign.center,
-                            ),
+                              // La lista de resultados
+                              SliverList(
+                                delegate: SliverChildBuilderDelegate((
+                                  context,
+                                  index,
+                                ) {
+                                  if (index < _resultados.length) {
+                                    final clase = _resultados[index];
+                                    return Card(
+                                      margin: const EdgeInsets.only(bottom: 13),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        side: BorderSide(
+                                          color: Colors.grey.withOpacity(0.3),
+                                          width: 1.0,
+                                        ),
+                                      ),
+                                      child: ExpansionTile(
+                                        key: ValueKey(
+                                          '$_expansionTileKey-${clase["profe"]}-${clase["aula"]}-${clase["horario"]}',
+                                        ),
+                                        title: Text(
+                                          clase["profe"],
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        collapsedBackgroundColor: Colors.white,
+                                        backgroundColor: Colors.grey[200],
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        collapsedShape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                _buildInfoRow(
+                                                  'Horario:',
+                                                  clase["horario"],
+                                                ),
+                                                _buildInfoRow(
+                                                  'Aula:',
+                                                  clase["aula"],
+                                                ),
+                                                _buildInfoRow(
+                                                  'Grupo:',
+                                                  clase["grupo"],
+                                                ),
+                                                _buildInfoRow(
+                                                  'Materia:',
+                                                  clase["materia"],
+                                                ),
+                                                const SizedBox(height: 10),
+                                                Wrap(
+                                                  alignment:
+                                                      WrapAlignment.center,
+                                                  spacing: 16,
+                                                  runSpacing: 8,
+                                                  children: [
+                                                    ElevatedButton.icon(
+                                                      onPressed: () {
+                                                        _registrarAsistencia(
+                                                          clase,
+                                                          "asistio",
+                                                        );
+                                                      },
+                                                      icon: const Icon(
+                                                        Icons.check_circle,
+                                                        color: Colors.white,
+                                                        size: 20,
+                                                      ),
+                                                      label: const Text(
+                                                        'Asistió',
+                                                        style: TextStyle(
+                                                          fontSize: 17,
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                          letterSpacing: 0.5,
+                                                        ),
+                                                      ),
+                                                      style: ElevatedButton.styleFrom(
+                                                        backgroundColor:
+                                                            Colors.green,
+                                                        foregroundColor:
+                                                            Colors.white,
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 20,
+                                                              vertical: 10,
+                                                            ),
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                10,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    ElevatedButton.icon(
+                                                      onPressed: () {
+                                                        _registrarAsistencia(
+                                                          clase,
+                                                          "falto",
+                                                        );
+                                                      },
+                                                      icon: const Icon(
+                                                        Icons.cancel,
+                                                        color: Colors.white,
+                                                        size: 20,
+                                                      ),
+                                                      label: const Text(
+                                                        'Faltó',
+                                                        style: TextStyle(
+                                                          fontSize: 17,
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                          letterSpacing: 0.5,
+                                                        ),
+                                                      ),
+                                                      style: ElevatedButton.styleFrom(
+                                                        backgroundColor:
+                                                            Colors.red,
+                                                        foregroundColor:
+                                                            Colors.white,
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 20,
+                                                              vertical: 10,
+                                                            ),
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                10,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 10),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  } else if (index == _resultados.length) {
+                                    //Texto Revisados
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                        left: 4.0,
+                                        bottom: 8.0,
+                                        top: 4,
+                                      ),
+                                      child: Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          'Revisados',
+                                          style: TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF193863),
+                                            letterSpacing: 1.1,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  } else if (index == _resultados.length + 1) {
+                                    //Texto No Revisados
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                        left: 4.0,
+                                        bottom: 8.0,
+                                        top: 4,
+                                      ),
+                                      child: Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          'No Revisados',
+                                          style: TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF193863),
+                                            letterSpacing: 1.1,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return null;
+                                }, childCount: _resultados.length + 2),
+                              ),
+                            ],
                           ),
                         ),
-                      )
-                    else
-                      const SizedBox.shrink(),
+                      ),
                   ],
                 ),
               ),
@@ -895,5 +1043,39 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+}
+
+class _HeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final double minHeight;
+  final double maxHeight;
+
+  _HeaderDelegate({
+    required this.child,
+    required this.minHeight,
+    required this.maxHeight,
+  });
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return child;
+  }
+
+  @override
+  double get maxExtent => maxHeight;
+
+  @override
+  double get minExtent => minHeight;
+
+  @override
+  bool shouldRebuild(covariant _HeaderDelegate oldDelegate) {
+    return oldDelegate.child != child ||
+        oldDelegate.minHeight != minHeight ||
+        oldDelegate.maxHeight != maxHeight;
   }
 }

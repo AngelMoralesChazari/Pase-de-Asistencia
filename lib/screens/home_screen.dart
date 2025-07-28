@@ -14,6 +14,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool _busquedaRealizada = false;
   bool _cargando = false;
   List<String> _opcionesFiltro1 = [];
   List<String> _opcionesFiltro2 = [];
@@ -25,7 +26,24 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _filtro1Seleccionado;
   String? _filtro2Seleccionado;
 
+  String? _diaActual;
+
   List<Map<dynamic, dynamic>> _resultados = [];
+
+  // Función para quitar tildes y normalizar texto
+  String quitarTildes(String str) {
+    return str
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('Á', 'A')
+        .replaceAll('É', 'E')
+        .replaceAll('Í', 'I')
+        .replaceAll('Ó', 'O')
+        .replaceAll('Ú', 'U');
+  }
 
   List<String> filtrarHorasPorTurno(String turno, List<String> todasLasHoras) {
     return todasLasHoras.where((hora) {
@@ -84,7 +102,22 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _setDiaActual();
     cargarFiltrosDesdeFirebase();
+  }
+
+  void _setDiaActual() {
+    final now = DateTime.now();
+    const dias = [
+      'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'
+    ];
+    setState(() {
+      if (now.weekday >= 1 && now.weekday <= 6) {
+        _diaActual = dias[now.weekday - 1];
+      } else {
+        _diaActual = null;
+      }
+    });
   }
 
   Future<void> cargarFiltrosDesdeFirebase() async {
@@ -130,24 +163,6 @@ class _HomeScreenState extends State<HomeScreen> {
       final edificiosFinales =
       edificiosNumericos.map((e) => "Edificio $e").toList()..sort();
 
-      int parseHora(String horaStr) {
-        horaStr = horaStr.trim();
-        // Extraer solo la hora inicial antes de " a "
-        final partes = horaStr.split(' a ');
-        if (partes.isEmpty) return 0;
-
-        String horaInicial = partes[0]; // Ejemplo: "18:20"
-
-        // Parsear hora inicial en formato 24h
-        final hm = horaInicial.split(':');
-        if (hm.length != 2) return 0;
-
-        int hora = int.tryParse(hm[0]) ?? 0;
-        int minuto = int.tryParse(hm[1]) ?? 0;
-
-        return hora * 60 + minuto;
-      }
-
       final horasFinales = horas.toList()
         ..sort((a, b) {
           int ha = int.tryParse(a.split(':')[0]) ?? 0;
@@ -155,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
           int hb = int.tryParse(b.split(':')[0]) ?? 0;
           int mb = int.tryParse(b.split(':')[1]) ?? 0;
           return (ha * 60 + ma).compareTo(hb * 60 + mb);
-          });
+        });
 
       setState(() {
         _opcionesFiltro1 = edificiosFinales;
@@ -165,11 +180,77 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<List<String>> _filtrarHorasPorEdificio(String edificioSeleccionado) async {
+    final app = Firebase.app();
+    final database = FirebaseDatabase.instanceFor(
+      app: app,
+      databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+    );
+
+    final ref = database.ref();
+    final snapshot = await ref.get();
+
+    if (snapshot.exists) {
+      final dataMap = snapshot.value as Map<dynamic, dynamic>;
+      final Set<String> horasDelEdificio = {};
+
+      for (var clase in dataMap.values) {
+        if (clase is Map) {
+          final aula = clase['A']?.toString() ?? '';
+          final hora = clase['B']?.toString() ?? '';
+
+          // Verificar si la clase pertenece al edificio seleccionado
+          if (aula.isNotEmpty) {
+            String edificio = "Edificio ${aula.substring(0, 1)}";
+
+            if (edificio == edificioSeleccionado) {
+              // Extraer hora de inicio válida
+              if (hora.contains(':') && hora.length >= 4 && hora != '00:00' && hora != '--') {
+                final partes = hora.split(' a ');
+                if (partes.isNotEmpty) {
+                  String horaInicio = partes[0].trim();
+                  horasDelEdificio.add(horaInicio);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Convertir a lista y ordenar
+      final horasOrdenadas = horasDelEdificio.toList()
+        ..sort((a, b) {
+          int ha = int.tryParse(a.split(':')[0]) ?? 0;
+          int ma = int.tryParse(a.split(':')[1]) ?? 0;
+          int hb = int.tryParse(b.split(':')[0]) ?? 0;
+          int mb = int.tryParse(b.split(':')[1]) ?? 0;
+          return (ha * 60 + ma).compareTo(hb * 60 + mb);
+        });
+
+      // Filtrar por turno si ya hay uno seleccionado
+      if (_turnoSeleccionado != null) {
+        return filtrarHorasPorTurno(_turnoSeleccionado!, horasOrdenadas);
+      }
+
+      return horasOrdenadas;
+    }
+
+    return [];
+  }
 
   void buscarClases() async {
     setState(() {
       _cargando = true;
+      _busquedaRealizada = true;
     });
+
+    if (_diaActual == null) {
+      setState(() {
+        _resultados = [];
+        _cargando = false;
+      });
+      return;
+    }
 
     if (_filtro1Seleccionado == null || _turnoSeleccionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -199,17 +280,33 @@ class _HomeScreenState extends State<HomeScreen> {
           final aula = clase['A']?.toString() ?? '';
           final hora = clase['B']?.toString() ?? '';
           String edificio = aula.length >= 1 ? "Edificio ${aula.substring(0, 1)}" : '';
+
           // Filtrar por edificio
           if (edificio != _filtro1Seleccionado) return false;
+
           // Filtrar por turno
           final partes = hora.split(' a ');
           if (partes.length != 2) return false;
           final horaInicio = partes[0].trim();
           final horaNum = int.tryParse(horaInicio.split(':')[0]) ?? 0;
-          if (_turnoSeleccionado == 'AM' && horaNum >= 12) return false;
-          if (_turnoSeleccionado == 'PM' && horaNum < 12) return false;
+
+          if (_turnoSeleccionado == 'AM') {
+            if (horaNum >= 12) return false; // Solo hasta 11:59
+          }
+          if (_turnoSeleccionado == 'PM') {
+            if (horaNum < 12) return false; // Desde 12:00 en adelante
+          }
+
           // Filtrar por hora seleccionada
           if (_filtro2Seleccionado != null && horaInicio != _filtro2Seleccionado) return false;
+
+          // Filtrar por día con normalización de tildes
+          if (_diaActual != null) {
+            String diaClase = quitarTildes(clase['C']?.toString().trim().toLowerCase() ?? '');
+            String diaActual = quitarTildes(_diaActual!.trim().toLowerCase());
+            if (diaClase != diaActual) return false;
+          }
+
           return true;
         }
         return false;
@@ -222,10 +319,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _resultados = clasesAgrupadas;
         _cargando = false;
       });
-
-      if (_resultados.isEmpty) {
-        print("No se encontraron clases con esos filtros.");
-      }
     } else {
       setState(() {
         _cargando = false;
@@ -423,7 +516,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -443,9 +535,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    SizedBox(height: 125),
+                    const SizedBox(height: 125),
                     Row(
                       children: [
+                        //Configuracion Turno
                         //Configuracion Turno
                         SizedBox(
                           width: 80,
@@ -453,19 +546,30 @@ class _HomeScreenState extends State<HomeScreen> {
                             value: _turnoSeleccionado,
                             opciones: _opcionesTurno,
                             hint: 'Turno',
-                            onChanged: (value) {
-                              setState((){
+                            onChanged: (value) async {
+                              setState(() {
                                 _turnoSeleccionado = value;
-                                _opcionesFiltro2 = value != null
-                                    ? filtrarHorasPorTurno(value, _todasLasHoras)
-                                    : [];
                                 _filtro2Seleccionado = null;
                               });
+
+                              // Si hay edificio seleccionado, actualizar horas por edificio y turno
+                              if (_filtro1Seleccionado != null && value != null) {
+                                final horasDelEdificio = await _filtrarHorasPorEdificio(_filtro1Seleccionado!);
+                                setState(() {
+                                  _opcionesFiltro2 = horasDelEdificio;
+                                });
+                              } else {
+                                setState(() {
+                                  _opcionesFiltro2 = [];
+                                });
+                              }
                             },
                           ),
                         ),
-                        SizedBox(width: 10),
+                        const SizedBox(width: 10),
 
+                        //Configuracion Edificio
+                        //Configuracion Edificio
                         //Configuracion Edificio
                         SizedBox(
                           width: 120,
@@ -473,12 +577,27 @@ class _HomeScreenState extends State<HomeScreen> {
                             value: _filtro1Seleccionado,
                             opciones: _opcionesFiltro1,
                             hint: 'Edificio',
-                            onChanged: (value) {
-                              setState(() => _filtro1Seleccionado = value);
+                            onChanged: (value) async {
+                              setState(() {
+                                _filtro1Seleccionado = value;
+                                _filtro2Seleccionado = null;
+                              });
+
+                              // Filtrar horas por edificio seleccionado
+                              if (value != null) {
+                                final horasDelEdificio = await _filtrarHorasPorEdificio(value);
+                                setState(() {
+                                  _opcionesFiltro2 = horasDelEdificio;
+                                });
+                              } else {
+                                setState(() {
+                                  _opcionesFiltro2 = [];
+                                });
+                              }
                             },
                           ),
                         ),
-                        SizedBox(width: 10),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: _buildFiltro(
                             value: _filtro2Seleccionado,
@@ -489,7 +608,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                           ),
                         ),
-                        SizedBox(width: 10),
+                        const SizedBox(width: 10),
                         Container(
                           width: 50,
                           height: 50,
@@ -498,7 +617,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: IconButton(
-                            icon: Icon(Icons.search, color: Colors.white),
+                            icon: const Icon(Icons.search, color: Colors.white),
                             onPressed: buscarClases,
                           ),
                         ),
@@ -510,7 +629,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (_resultados.isNotEmpty)
                       Expanded(
                         child: Container(
-                          padding: EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.95),
                             borderRadius: BorderRadius.circular(12),
@@ -518,7 +637,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: ListView(
                             children: _resultados.map((clase) {
                               return Card(
-                                margin: EdgeInsets.only(bottom: 13),
+                                margin: const EdgeInsets.only(bottom: 13),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     side: BorderSide(
@@ -528,7 +647,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: ExpansionTile(
                                   title: Text(
                                     clase["profe"],
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
                                     ),
@@ -536,24 +655,22 @@ class _HomeScreenState extends State<HomeScreen> {
                                   collapsedBackgroundColor: Colors.white,
                                   backgroundColor: Colors.grey[200],
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadiusGeometry.circular(8),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
                                   collapsedShape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadiusGeometry.circular(8),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
                                   children: [
                                     Padding(
-                                      padding:
-                                      EdgeInsets.symmetric(horizontal: 16),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
                                       child: Column(
-                                        crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           _buildInfoRow('Horario:', clase["horario"]),
                                           _buildInfoRow('Aula:', clase["aula"]),
                                           _buildInfoRow('Grupo:', clase["grupo"]),
                                           _buildInfoRow('Materia:', clase["materia"]),
-                                          SizedBox(height: 10),
+                                          const SizedBox(height: 10),
                                         ],
                                       ),
                                     ),
@@ -563,7 +680,30 @@ class _HomeScreenState extends State<HomeScreen> {
                             }).toList(),
                           ),
                         ),
-                      ),
+                      )
+                    else if (_busquedaRealizada && !_cargando)
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 200),
+                            child: Text(
+                              _diaActual == null
+                                  ? 'No hay clases este día.'
+                                  : 'No se encontraron clases con esos filtros.',
+                              style: const TextStyle(
+                                fontSize: 22,
+                                color: Colors.black,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1.2,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox.shrink(),
                   ],
                 ),
               ),
@@ -572,7 +712,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Positioned.fill(
                 child: Container(
                   color: Colors.black.withOpacity(0.3),
-                  child: Center(
+                  child: const Center(
                     child: CircularProgressIndicator(color: Colors.white),
                   ),
                 ),
@@ -591,12 +731,12 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
           ),
-          SizedBox(width: 5),
+          const SizedBox(width: 5),
           Expanded(
             child: Text(
               value,

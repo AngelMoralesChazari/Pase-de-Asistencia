@@ -28,6 +28,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String? _diaActual;
 
+  int _busquedaKey = 0;
+  int _expansionTileKey = 0;
+
   List<Map<dynamic, dynamic>> _resultados = [];
 
   // Función para quitar tildes y normalizar texto
@@ -245,6 +248,8 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _resultados = [];
         _cargando = false;
+        _busquedaKey++;
+        _expansionTileKey++;
       });
       return;
     }
@@ -315,6 +320,8 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _resultados = clasesAgrupadas;
         _cargando = false;
+        _busquedaKey++;
+        _expansionTileKey++;
       });
     } else {
       setState(() {
@@ -629,6 +636,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: ListView(
+                            key: ValueKey(_busquedaKey),
                             children: _resultados.map((clase) {
                               return Card(
                                 margin: const EdgeInsets.only(bottom: 13),
@@ -639,6 +647,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       width: 1.0,
                                     )),
                                 child: ExpansionTile(
+                                  key:
+                                  ValueKey('$_expansionTileKey-${clase["profe"]}-${clase["aula"]}-${clase["horario"]}'),
                                   title: Text(
                                     clase["profe"],
                                     style: const TextStyle(

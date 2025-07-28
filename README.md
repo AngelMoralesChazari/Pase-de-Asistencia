@@ -37,7 +37,7 @@ Este proyecto es un punto de partida para una aplicación Flutter. Para ponerlo 
 
 1.  **Clona el repositorio:**
     ```bash
-    git clone [URL_DE_TU_REPOSITORIO]
+    git clone https://github.com/AngelMoralesChazari/Pase-de-Asistencia.git
     cd pase_de_asistencia
     ```
 2.  **Instala las dependencias:**

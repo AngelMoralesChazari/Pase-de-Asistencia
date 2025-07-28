@@ -49,15 +49,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return todasLasHoras.where((hora) {
       final partesHora = hora.split(':');
       if (partesHora.length != 2) return false;
-
       final horaNum = int.tryParse(partesHora[0]) ?? 0;
-
       if (turno == 'AM') {
         return horaNum < 12;
       } else if (turno == 'PM') {
         return horaNum >= 12;
       }
-
       return false;
     }).toList();
   }
@@ -556,7 +553,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               if (_filtro1Seleccionado != null && value != null) {
                                 final horasDelEdificio = await _filtrarHorasPorEdificio(_filtro1Seleccionado!);
                                 setState(() {
-                                  _opcionesFiltro2 = horasDelEdificio;
+                                  _opcionesFiltro2 = filtrarHorasPorTurno(value, horasDelEdificio);
                                 });
                               } else {
                                 setState(() {
@@ -568,8 +565,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(width: 10),
 
-                        //Configuracion Edificio
-                        //Configuracion Edificio
                         //Configuracion Edificio
                         SizedBox(
                           width: 120,

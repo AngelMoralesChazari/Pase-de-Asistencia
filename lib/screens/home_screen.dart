@@ -536,7 +536,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       children: [
                         //Configuracion Turno
-                        //Configuracion Turno
                         SizedBox(
                           width: 80,
                           child: _buildFiltro(
@@ -665,6 +664,73 @@ class _HomeScreenState extends State<HomeScreen> {
                                           _buildInfoRow('Aula:', clase["aula"]),
                                           _buildInfoRow('Grupo:', clase["grupo"]),
                                           _buildInfoRow('Materia:', clase["materia"]),
+                                          const SizedBox(height: 10),
+
+                                          //Botones de Asistencia
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              ElevatedButton.icon(
+                                                onPressed: () {
+                                                  // Aquí irá la función para registrar asistencia
+                                                },
+                                                icon: const Icon(
+                                                  Icons.check_circle,
+                                                  color: Colors.white,
+                                                  size: 20,
+                                                ),
+                                                //icon: const Icon(Icons.check, color: Colors.white),
+                                                label: const Text(
+                                                  'Asistió',
+                                                  style: TextStyle(
+                                                    fontSize: 17,
+                                                    fontWeight: FontWeight.w800,
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                ),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.green,
+                                                  foregroundColor: Colors.white,
+                                                  //overlayColor: MaterialStateProperty.all<Color>(Colors.black26),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 16),
+
+                                              //Botón de Falta
+                                              ElevatedButton.icon(
+                                                onPressed: () {
+                                                  // Aquí irá la función para las faltas
+                                                },
+                                                icon: const Icon(
+                                                  Icons.cancel,
+                                                  color: Colors.white,
+                                                  size: 20,
+                                                ),
+                                                //icon: const Icon(Icons.close, color: Colors.white),
+                                                label: const Text(
+                                                  'Faltó',
+                                                  style: TextStyle(
+                                                    fontSize: 17,
+                                                    fontWeight: FontWeight.w800,
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                ),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.red,
+                                                  foregroundColor: Colors.white,
+                                                  //overlayColor: MaterialStateProperty.all<Color>(Colors.black26),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                           const SizedBox(height: 10),
                                         ],
                                       ),

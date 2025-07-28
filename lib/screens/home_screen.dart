@@ -131,12 +131,18 @@ class _HomeScreenState extends State<HomeScreen> {
     final snapshot = await ref.get();
 
     if (snapshot.exists) {
-      final dataMap = snapshot.value as Map<dynamic, dynamic>;
+      final data = snapshot.value;
+      List<dynamic> clasesList = [];
+      if (data is List) {
+        clasesList = data.where((e) => e != null).toList();
+      } else if (data is Map) {
+        clasesList = data.values.where((e) => e != null).toList();
+      }
 
       final Set<String> horas = {};
       final Set<String> edificiosNumericos = {};
 
-      for (var clase in dataMap.values) {
+      for (var clase in clasesList) {
         if (clase is Map) {
           if (clase['A'] != null && clase['A'].toString().isNotEmpty) {
             String aula = clase['A'].toString();
@@ -147,9 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }
           if (clase['B'] != null) {
             final horaCruda = clase['B'].toString().trim();
-            // Filtrar horas válidas
             if (horaCruda.contains(':') && horaCruda.length >= 4 && horaCruda != '00:00' && horaCruda != '--') {
-              // Extraer solo la hora de inicio antes de " a "
               final partes = horaCruda.split(' a ');
               if (partes.isNotEmpty) {
                 String horaInicio = partes[0].trim();
@@ -191,10 +195,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final snapshot = await ref.get();
 
     if (snapshot.exists) {
-      final dataMap = snapshot.value as Map<dynamic, dynamic>;
+      final data = snapshot.value;
+      List<dynamic> clasesList = [];
+      if (data is List) {
+        clasesList = data.where((e) => e != null).toList();
+      } else if (data is Map) {
+        clasesList = data.values.where((e) => e != null).toList();
+      }
       final Set<String> horasDelEdificio = {};
 
-      for (var clase in dataMap.values) {
+      for (var clase in clasesList) {
         if (clase is Map) {
           final aula = clase['A']?.toString() ?? '';
           final hora = clase['B']?.toString() ?? '';
@@ -274,10 +284,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final snapshot = await ref.get();
 
     if (snapshot.exists) {
-      final dataMap = snapshot.value as Map<dynamic, dynamic>;
+      final data = snapshot.value;
+      List<dynamic> clasesList = [];
+      if (data is List) {
+        clasesList = data.where((e) => e != null).toList();
+      } else if (data is Map) {
+        clasesList = data.values.where((e) => e != null).toList();
+      }
 
       // Filtrar por edificio y turno
-      final clasesFiltradas = dataMap.values.where((clase) {
+      final clasesFiltradas = clasesList.where((clase) {
         if (clase is Map) {
           final aula = clase['A']?.toString() ?? '';
           final hora = clase['B']?.toString() ?? '';
@@ -481,6 +497,69 @@ class _HomeScreenState extends State<HomeScreen> {
     return horas * 60 + minutos;
   }
 
+  // --- Funciones de asistencias ---
+
+  Future<void> _registrarAsistencia(Map<dynamic, dynamic> clase, String estadoAsistencia) async {
+    setState(() {
+      _cargando = true; // Muestra el indicador de carga
+    });
+
+    try {
+      final app = Firebase.app();
+      final database = FirebaseDatabase.instanceFor(
+        app: app,
+        databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+      );
+
+      final ref = database.ref();
+
+      // 1. Obtener la fecha actual en formato YYYY-MM-DD
+      final now = DateTime.now();
+      final fechaActual = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+      // 2. Crear una clave única para el registro de asistencia
+      // Reemplazamos espacios y caracteres especiales en el horario para la clave
+      final horarioParaClave = clase["horario"].toString().replaceAll(' ', '-').replaceAll(':', '');
+      final claveRegistro = "${clase["profeid"]}_$horarioParaClave";
+
+      // 3. Definir la ruta donde se guardará la asistencia
+      final asistenciaRef = ref.child('asistencias').child(fechaActual).child(claveRegistro);
+
+      // 4. Crear el objeto de datos a guardar
+      final datosAsistencia = {
+        'estado': estadoAsistencia,
+        'profe': clase["profe"],
+        'profeid': clase["profeid"],
+        'aula': clase["aula"],
+        'grupo': clase["grupo"],
+        'materia': clase["materia"],
+        'horario': clase["horario"],
+        'timestamp': ServerValue.timestamp, // Guarda la hora exacta del servidor de Firebase
+      };
+
+      // 5. Guardar los datos en Firebase
+      await asistenciaRef.set(datosAsistencia);
+
+      // Mostrar mensaje de éxito
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Asistencia de ${clase["profe"]} registrada como "$estadoAsistencia"')),
+      );
+
+    } catch (e) {
+      // Mostrar mensaje de error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al registrar asistencia: $e')),
+      );
+      print('Error al registrar asistencia: $e'); // Para depuración
+    } finally {
+      setState(() {
+        _cargando = false; // Oculta el indicador de carga
+      });
+    }
+  }
+
+// --- FIN DEL NUEVO CÓDIGO ---
+
   Widget _buildFiltro({
     required String? value,
     required List<String> opciones,
@@ -677,19 +756,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                           const SizedBox(height: 10),
 
                                           //Botones de Asistencia
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                          //Botones de Asistencia
+                                          Wrap(
+                                            alignment: WrapAlignment.center,
+                                            spacing: 16,
+                                            runSpacing: 8,
                                             children: [
                                               ElevatedButton.icon(
                                                 onPressed: () {
-                                                  // Aquí irá la función para registrar asistencia
+                                                  _registrarAsistencia(clase, "asistio");
                                                 },
                                                 icon: const Icon(
                                                   Icons.check_circle,
                                                   color: Colors.white,
                                                   size: 20,
                                                 ),
-                                                //icon: const Icon(Icons.check, color: Colors.white),
                                                 label: const Text(
                                                   'Asistió',
                                                   style: TextStyle(
@@ -701,26 +782,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 style: ElevatedButton.styleFrom(
                                                   backgroundColor: Colors.green,
                                                   foregroundColor: Colors.white,
-                                                  //overlayColor: MaterialStateProperty.all<Color>(Colors.black26),
                                                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                                                   shape: RoundedRectangleBorder(
                                                     borderRadius: BorderRadius.circular(10),
                                                   ),
                                                 ),
                                               ),
-                                              const SizedBox(width: 16),
-
-                                              //Botón de Falta
                                               ElevatedButton.icon(
                                                 onPressed: () {
-                                                  // Aquí irá la función para las faltas
+                                                  _registrarAsistencia(clase, "falto");
                                                 },
                                                 icon: const Icon(
                                                   Icons.cancel,
                                                   color: Colors.white,
                                                   size: 20,
                                                 ),
-                                                //icon: const Icon(Icons.close, color: Colors.white),
                                                 label: const Text(
                                                   'Faltó',
                                                   style: TextStyle(
@@ -732,7 +808,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 style: ElevatedButton.styleFrom(
                                                   backgroundColor: Colors.red,
                                                   foregroundColor: Colors.white,
-                                                  //overlayColor: MaterialStateProperty.all<Color>(Colors.black26),
                                                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                                                   shape: RoundedRectangleBorder(
                                                     borderRadius: BorderRadius.circular(10),

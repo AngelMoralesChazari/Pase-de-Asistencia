@@ -32,7 +32,10 @@ class _HomeScreenState extends State<HomeScreen> {
   int _busquedaKey = 0;
   int _expansionTileKey = 0;
 
-  List<Map<dynamic, dynamic>> _resultados = [];
+  // ======= INICIO BLOQUE 1 =======
+  List<Map<dynamic, dynamic>> _pendientes = [];   // Clases sin revisar
+  List<Map<dynamic, dynamic>> _revisados  = [];   // Clases ya revisadas
+  // ======= FIN BLOQUE 1 =======
 
   // Función para quitar tildes y normalizar texto
   String quitarTildes(String str) {
@@ -131,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final database = FirebaseDatabase.instanceFor(
       app: app,
       databaseURL:
-          'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+      'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
     );
 
     final ref = database.ref();
@@ -175,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       final edificiosFinales =
-          edificiosNumericos.map((e) => "Edificio $e").toList()..sort();
+      edificiosNumericos.map((e) => "Edificio $e").toList()..sort();
 
       final horasFinales = horas.toList()
         ..sort((a, b) {
@@ -195,13 +198,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<List<String>> _filtrarHorasPorEdificio(
-    String edificioSeleccionado,
-  ) async {
+      String edificioSeleccionado,
+      ) async {
     final app = Firebase.app();
     final database = FirebaseDatabase.instanceFor(
       app: app,
       databaseURL:
-          'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+      'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
     );
 
     final ref = database.ref();
@@ -264,6 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return [];
   }
 
+  // ======= INICIO BLOQUE 2 =======
   void buscarClases() async {
     setState(() {
       _cargando = true;
@@ -272,8 +276,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (_diaActual == null) {
       setState(() {
-        _resultados = [];
-        _cargando = false;
+        _pendientes = [];
+        _revisados  = [];
+        _cargando   = false;
         _busquedaKey++;
         _expansionTileKey++;
       });
@@ -284,90 +289,73 @@ class _HomeScreenState extends State<HomeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecciona turno y edificio')),
       );
-      setState(() {
-        _cargando = false;
-      });
+      setState(() => _cargando = false);
       return;
     }
 
     final app = Firebase.app();
     final database = FirebaseDatabase.instanceFor(
       app: app,
-      databaseURL:
-          'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+      databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
     );
 
     final ref = database.ref();
     final snapshot = await ref.get();
 
-    if (snapshot.exists) {
-      final data = snapshot.value;
-      List<dynamic> clasesList = [];
-      if (data is List) {
-        clasesList = data.where((e) => e != null).toList();
-      } else if (data is Map) {
-        clasesList = data.values.where((e) => e != null).toList();
+    if (!snapshot.exists) {
+      setState(() => _cargando = false);
+      return;
+    }
+
+    /* ------------ filtrado (idéntico al que ya tenías) ------------- */
+    final data = snapshot.value;
+    List<dynamic> clasesList = [];
+    if (data is List) {
+      clasesList = data.where((e) => e != null).toList();
+    } else if (data is Map) {
+      clasesList = data.values.where((e) => e != null).toList();
+    }
+
+    final clasesFiltradas = clasesList.where((clase) {
+      if (clase is! Map) return false;
+
+      final aula = clase['A']?.toString() ?? '';
+      final hora = clase['B']?.toString() ?? '';
+      final edificio = aula.isNotEmpty ? "Edificio ${aula.substring(0, 1)}" : '';
+
+      if (edificio != _filtro1Seleccionado) return false;
+
+      final partes = hora.split(' a ');
+      if (partes.length != 2) return false;
+      final horaInicio = partes[0].trim();
+      final horaNum = int.tryParse(horaInicio.split(':')[0]) ?? 0;
+
+      if (_turnoSeleccionado == 'AM' && horaNum >= 12) return false;
+      if (_turnoSeleccionado == 'PM' && horaNum < 12)  return false;
+
+      if (_filtro2Seleccionado != null && horaInicio != _filtro2Seleccionado) {
+        return false;
       }
 
-      // Filtrar por edificio y turno
-      final clasesFiltradas = clasesList.where((clase) {
-        if (clase is Map) {
-          final aula = clase['A']?.toString() ?? '';
-          final hora = clase['B']?.toString() ?? '';
-          String edificio = aula.length >= 1
-              ? "Edificio ${aula.substring(0, 1)}"
-              : '';
+      if (_diaActual != null) {
+        final diaClase  = quitarTildes(clase['C']?.toString().trim().toLowerCase() ?? '');
+        final diaActual = quitarTildes(_diaActual!.trim().toLowerCase());
+        if (diaClase != diaActual) return false;
+      }
+      return true;
+    }).toList();
 
-          // Filtrar por edificio
-          if (edificio != _filtro1Seleccionado) return false;
+    final clasesAgrupadas = _agruparClasesConsecutivas(clasesFiltradas);
 
-          // Filtrar por turno
-          final partes = hora.split(' a ');
-          if (partes.length != 2) return false;
-          final horaInicio = partes[0].trim();
-          final horaNum = int.tryParse(horaInicio.split(':')[0]) ?? 0;
-
-          if (_turnoSeleccionado == 'AM') {
-            if (horaNum >= 12) return false; // Solo hasta 11:59
-          }
-          if (_turnoSeleccionado == 'PM') {
-            if (horaNum < 12) return false; // Desde 12:00 en adelante
-          }
-
-          // Filtrar por hora seleccionada
-          if (_filtro2Seleccionado != null &&
-              horaInicio != _filtro2Seleccionado)
-            return false;
-
-          // Filtrar por día con normalización de tildes
-          if (_diaActual != null) {
-            String diaClase = quitarTildes(
-              clase['C']?.toString().trim().toLowerCase() ?? '',
-            );
-            String diaActual = quitarTildes(_diaActual!.trim().toLowerCase());
-            if (diaClase != diaActual) return false;
-          }
-
-          return true;
-        }
-        return false;
-      }).toList();
-
-      // Agrupar clases consecutivas
-      final clasesAgrupadas = _agruparClasesConsecutivas(clasesFiltradas);
-
-      setState(() {
-        _resultados = clasesAgrupadas;
-        _cargando = false;
-        _busquedaKey++;
-        _expansionTileKey++;
-      });
-    } else {
-      setState(() {
-        _cargando = false;
-      });
-    }
+    setState(() {
+      _pendientes   = clasesAgrupadas; // <-- sólo pendientes al iniciar
+      _revisados    = [];
+      _cargando     = false;
+      _busquedaKey++;
+      _expansionTileKey++;
+    });
   }
+// ======= FIN BLOQUE 2 =======
 
   List<Map<dynamic, dynamic>> _agruparClasesConsecutivas(List<dynamic> clases) {
     // Convertir a lista de mapas y ordenar por profesor, día, aula, materia y hora
@@ -526,9 +514,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // --- Funciones de asistencias ---
 
   Future<void> _registrarAsistencia(
-    Map<dynamic, dynamic> clase,
-    String estadoAsistencia,
-  ) async {
+      Map<dynamic, dynamic> clase,
+      String estadoAsistencia,
+      ) async {
     setState(() {
       _cargando = true; // Muestra el indicador de carga
     });
@@ -538,7 +526,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final database = FirebaseDatabase.instanceFor(
         app: app,
         databaseURL:
-            'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+        'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
       );
 
       final ref = database.ref();
@@ -574,15 +562,22 @@ class _HomeScreenState extends State<HomeScreen> {
         'grupo': clase["grupo"],
         'materia': clase["materia"],
         'horario': clase["horario"],
-        'timestamp': ServerValue.timestamp,
-        // Guarda la hora exacta del servidor de Firebase
+        'timestamp': ServerValue.timestamp, // Guarda la hora exacta del servidor de Firebase
       };
 
       // 5. Guardar los datos en Firebase
       await asistenciaRef.set(datosAsistencia);
 
+      // Pendientes → revisados
       setState(() {
         _asistenciasRegistradas[claveRegistro] = estadoAsistencia;
+
+        // Mover la tarjeta de pendientes → revisados
+        _pendientes.removeWhere((c) {
+          final key = "${c["profeid"]}_${c["horario"].toString().replaceAll(' ', '-').replaceAll(':', '')}";
+          return key == claveRegistro;
+        });
+        _revisados.add(clase);
       });
 
       // Mostrar mensaje de éxito
@@ -681,9 +676,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               if (_filtro1Seleccionado != null &&
                                   value != null) {
                                 final horasDelEdificio =
-                                    await _filtrarHorasPorEdificio(
-                                      _filtro1Seleccionado!,
-                                    );
+                                await _filtrarHorasPorEdificio(
+                                  _filtro1Seleccionado!,
+                                );
                                 setState(() {
                                   _opcionesFiltro2 = filtrarHorasPorTurno(
                                     value,
@@ -716,7 +711,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               // Filtrar horas por edificio seleccionado
                               if (value != null) {
                                 final horasDelEdificio =
-                                    await _filtrarHorasPorEdificio(value);
+                                await _filtrarHorasPorEdificio(value);
                                 setState(() {
                                   _opcionesFiltro2 = horasDelEdificio;
                                 });
@@ -758,7 +753,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 3),
 
                     // Mostrar el texto solo si hay resultados
-                    if (_resultados.isNotEmpty)
+                    if (_pendientes.isNotEmpty || _revisados.isNotEmpty)
                       Expanded(
                         child: Container(
                           padding: const EdgeInsets.all(12),
@@ -766,280 +761,48 @@ class _HomeScreenState extends State<HomeScreen> {
                             color: Colors.white.withOpacity(0.95),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: CustomScrollView(
+                          child:
+                          // ======= INICIO BLOQUE 5 =======
+                          CustomScrollView(
                             slivers: [
-                              // El header que se mueve con el scroll
-                              SliverPersistentHeader(
-                                pinned: false,
-                                floating: false,
-                                delegate: _HeaderDelegate(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(
-                                      left: 4.0,
-                                      bottom: 8.0,
-                                    ),
-                                    child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        'Pendientes Por Revisar',
-                                        style: const TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF193863),
-                                          letterSpacing: 1.1,
-                                        ),
-                                      ),
-                                    ),
+                              // ----------- PENDIENTES ------------
+                              if (_pendientes.isNotEmpty) ...[
+                                SliverPersistentHeader(
+                                  pinned: false,
+                                  delegate: _HeaderDelegate(
+                                    child: _buildSeccionTitulo('Pendientes Por Revisar'),
+                                    minHeight: 40,
+                                    maxHeight: 40,
                                   ),
-                                  minHeight: 40,
-                                  maxHeight: 40,
                                 ),
-                              ),
-                              // La lista de resultados
-                              SliverList(
-                                delegate: SliverChildBuilderDelegate((
-                                  context,
-                                  index,
-                                ) {
-                                  if (index < _resultados.length) {
-                                    final clase = _resultados[index];
-                                    final horarioParaClave = clase["horario"]
-                                        .toString()
-                                        .replaceAll(' ', '-')
-                                        .replaceAll(':', '');
-                                    final claveRegistro =
-                                        "${clase["profeid"]}_$horarioParaClave";
-                                    final asistenciaRegistrada =
-                                        _asistenciasRegistradas[claveRegistro];
-                                    final botonesDeshabilitados =
-                                        asistenciaRegistrada != null;
+                                SliverList(
+                                  delegate: SliverChildBuilderDelegate(
+                                        (ctx, i) => _buildClaseCard(_pendientes[i]),
+                                    childCount: _pendientes.length,
+                                  ),
+                                ),
+                              ],
 
-                                    return Card(
-                                      margin: const EdgeInsets.only(bottom: 13),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                        side: BorderSide(
-                                          color: Colors.grey.withOpacity(0.3),
-                                          width: 1.0,
-                                        ),
-                                      ),
-                                      child: ExpansionTile(
-                                        key: ValueKey(
-                                          '$_expansionTileKey-${clase["profe"]}-${clase["aula"]}-${clase["horario"]}',
-                                        ),
-                                        title: Text(
-                                          clase["profe"],
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                        collapsedBackgroundColor: Colors.white,
-                                        backgroundColor: Colors.grey[200],
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        collapsedShape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        children: [
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                            ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                _buildInfoRow(
-                                                  'Horario:',
-                                                  clase["horario"],
-                                                ),
-                                                _buildInfoRow(
-                                                  'Aula:',
-                                                  clase["aula"],
-                                                ),
-                                                _buildInfoRow(
-                                                  'Grupo:',
-                                                  clase["grupo"],
-                                                ),
-                                                _buildInfoRow(
-                                                  'Materia:',
-                                                  clase["materia"],
-                                                ),
-                                                const SizedBox(height: 10),
-                                                if (botonesDeshabilitados)
-                                                  Padding(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          vertical: 8.0,
-                                                        ),
-                                                    child: Text(
-                                                      'Asistencia Registrada: ${asistenciaRegistrada == "asistio" ? "Asistió" : "Faltó"}',
-                                                      style: TextStyle(
-                                                        color:
-                                                            asistenciaRegistrada ==
-                                                                "asistio"
-                                                            ? Colors.green
-                                                            : Colors.red,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 16,
-                                                      ),
-                                                    ),
-                                                  )
-                                                else
-                                                  Wrap(
-                                                    alignment:
-                                                        WrapAlignment.center,
-                                                    spacing: 16,
-                                                    runSpacing: 8,
-                                                    children: [
-                                                      ElevatedButton.icon(
-                                                        onPressed:
-                                                            botonesDeshabilitados
-                                                            ? null
-                                                            : () {
-                                                                _registrarAsistencia(
-                                                                  clase,
-                                                                  "asistio",
-                                                                );
-                                                              },
-                                                        icon: const Icon(
-                                                          Icons.check_circle,
-                                                          color: Colors.white,
-                                                          size: 20,
-                                                        ),
-                                                        label: const Text(
-                                                          'Asistió',
-                                                          style: TextStyle(
-                                                            fontSize: 17,
-                                                            fontWeight:
-                                                                FontWeight.w800,
-                                                            letterSpacing: 0.5,
-                                                          ),
-                                                        ),
-                                                        style: ElevatedButton.styleFrom(
-                                                          backgroundColor:
-                                                              Colors.green,
-                                                          foregroundColor:
-                                                              Colors.white,
-                                                          padding:
-                                                              const EdgeInsets.symmetric(
-                                                                horizontal: 20,
-                                                                vertical: 10,
-                                                              ),
-                                                          shape: RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  10,
-                                                                ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      ElevatedButton.icon(
-                                                        onPressed:
-                                                            botonesDeshabilitados
-                                                            ? null
-                                                            : () {
-                                                                _registrarAsistencia(
-                                                                  clase,
-                                                                  "falto",
-                                                                );
-                                                              },
-                                                        icon: const Icon(
-                                                          Icons.cancel,
-                                                          color: Colors.white,
-                                                          size: 20,
-                                                        ),
-                                                        label: const Text(
-                                                          'Faltó',
-                                                          style: TextStyle(
-                                                            fontSize: 17,
-                                                            fontWeight:
-                                                                FontWeight.w800,
-                                                            letterSpacing: 0.5,
-                                                          ),
-                                                        ),
-                                                        style: ElevatedButton.styleFrom(
-                                                          backgroundColor:
-                                                              Colors.red,
-                                                          foregroundColor:
-                                                              Colors.white,
-                                                          padding:
-                                                              const EdgeInsets.symmetric(
-                                                                horizontal: 20,
-                                                                vertical: 10,
-                                                              ),
-                                                          shape: RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  10,
-                                                                ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                const SizedBox(height: 10),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  } else if (index == _resultados.length) {
-                                    //Texto Revisados
-                                    return Padding(
-                                      padding: const EdgeInsets.only(
-                                        left: 4.0,
-                                        bottom: 8.0,
-                                        top: 4,
-                                      ),
-                                      child: Align(
-                                        alignment: Alignment.centerLeft,
-                                        child: Text(
-                                          'Revisados',
-                                          style: TextStyle(
-                                            fontSize: 22,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF193863),
-                                            letterSpacing: 1.1,
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  } else if (index == _resultados.length + 1) {
-                                    //Texto No Revisados
-                                    return Padding(
-                                      padding: const EdgeInsets.only(
-                                        left: 4.0,
-                                        bottom: 8.0,
-                                        top: 4,
-                                      ),
-                                      child: Align(
-                                        alignment: Alignment.centerLeft,
-                                        child: Text(
-                                          'No Revisados',
-                                          style: TextStyle(
-                                            fontSize: 22,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF193863),
-                                            letterSpacing: 1.1,
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  return null;
-                                }, childCount: _resultados.length + 2),
-                              ),
+                              // ----------- REVISADOS -------------
+                              if (_revisados.isNotEmpty) ...[
+                                SliverPersistentHeader(
+                                  pinned: false,
+                                  delegate: _HeaderDelegate(
+                                    child: _buildSeccionTitulo('Revisados'),
+                                    minHeight: 40,
+                                    maxHeight: 40,
+                                  ),
+                                ),
+                                SliverList(
+                                  delegate: SliverChildBuilderDelegate(
+                                        (ctx, i) => _buildClaseCard(_revisados[i], revisado: true),
+                                    childCount: _revisados.length,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
+                          // ======= FIN BLOQUE 5 =======
                         ),
                       ),
                   ],
@@ -1088,6 +851,105 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  // ======= INICIO BLOQUE 4 =======
+  Widget _buildSeccionTitulo(String texto) => Padding(
+    padding: const EdgeInsets.only(left: 4.0, bottom: 8.0),
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        texto,
+        style: const TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF193863),
+          letterSpacing: 1.1,
+        ),
+      ),
+    ),
+  );
+
+  Widget _buildClaseCard(Map<dynamic, dynamic> clase, {bool revisado = false}) {
+    final horarioParaClave = clase["horario"].toString().replaceAll(' ', '-').replaceAll(':', '');
+    final claveRegistro    = "${clase["profeid"]}_$horarioParaClave";
+    final asistenciaRegistrada = _asistenciasRegistradas[claveRegistro];
+    final botonesDeshabilitados = revisado || asistenciaRegistrada != null;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 13),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1.0),
+      ),
+      child: ExpansionTile(
+        key: ValueKey('$_expansionTileKey-${clase["profe"]}-${clase["aula"]}-${clase["horario"]}'),
+        title: Text(clase["profe"], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        collapsedBackgroundColor: Colors.white,
+        backgroundColor: Colors.grey[200],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildInfoRow('Horario:', clase["horario"]),
+                _buildInfoRow('Aula:',    clase["aula"]),
+                _buildInfoRow('Grupo:',   clase["grupo"]),
+                _buildInfoRow('Materia:', clase["materia"]),
+                const SizedBox(height: 10),
+                if (botonesDeshabilitados)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'Asistencia Registrada: ${asistenciaRegistrada == "asistio" ? "Asistió" : "Faltó"}',
+                      style: TextStyle(
+                        color: asistenciaRegistrada == "asistio" ? Colors.green : Colors.red,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  )
+                else
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 16,
+                    runSpacing: 8,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => _registrarAsistencia(clase, "asistio"),
+                        icon : const Icon(Icons.check_circle, size: 20),
+                        label: const Text('Asistió', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () => _registrarAsistencia(clase, "falto"),
+                        icon : const Icon(Icons.cancel, size: 20),
+                        label: const Text('Faltó',   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+// ======= FIN BLOQUE 4 =======
 }
 
 class _HeaderDelegate extends SliverPersistentHeaderDelegate {
@@ -1103,10 +965,10 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+      BuildContext context,
+      double shrinkOffset,
+      bool overlapsContent,
+      ) {
     return child;
   }
 

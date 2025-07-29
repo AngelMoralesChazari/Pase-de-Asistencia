@@ -22,6 +22,12 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo_app.jpg"
 
 flutter:
   uses-material-design: true
@@ -30,4 +36,5 @@ flutter:
     - assets/images/login.jpg
     - assets/images/inicio.jpg
     - assets/images/google_logo.png
+    - assets/images/logo_app.jpg
     - assets/supervisores.json

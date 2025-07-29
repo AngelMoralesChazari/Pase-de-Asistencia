@@ -32,10 +32,9 @@ class _HomeScreenState extends State<HomeScreen> {
   int _busquedaKey = 0;
   int _expansionTileKey = 0;
 
-  // ======= INICIO BLOQUE 1 =======
   List<Map<dynamic, dynamic>> _pendientes = [];   // Clases sin revisar
   List<Map<dynamic, dynamic>> _revisados  = [];   // Clases ya revisadas
-  // ======= FIN BLOQUE 1 =======
+  List<Map<dynamic, dynamic>> _noSupervisados = [];  // Clases fuera de tiempo
 
   // Función para quitar tildes y normalizar texto
   String quitarTildes(String str) {
@@ -102,6 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     return exit ?? false;
   }
+
 
   @override
   void initState() {
@@ -278,6 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _pendientes = [];
         _revisados  = [];
+        _noSupervisados = [];
         _cargando   = false;
         _busquedaKey++;
         _expansionTileKey++;
@@ -307,7 +308,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    /* ------------ filtrado (idéntico al que ya tenías) ------------- */
     final data = snapshot.value;
     List<dynamic> clasesList = [];
     if (data is List) {
@@ -347,16 +347,54 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final clasesAgrupadas = _agruparClasesConsecutivas(clasesFiltradas);
 
+    // --- Clasificación ---
+    List<Map<dynamic, dynamic>> pendientes = [];
+    List<Map<dynamic, dynamic>> revisados = [];
+    List<Map<dynamic, dynamic>> noSupervisados = [];
+
+    final now = DateTime.now();
+    final hoy = DateTime(now.year, now.month, now.day);
+
+    for (var clase in clasesAgrupadas) {
+      final horarioParaClave = clase["horario"].toString().replaceAll(' ', '-').replaceAll(':', '');
+      final claveRegistro    = "${clase["profeid"]}_$horarioParaClave";
+      final asistenciaRegistrada = _asistenciasRegistradas[claveRegistro];
+
+      if (asistenciaRegistrada != null) {
+        revisados.add(clase);
+        continue;
+      }
+
+      final horaInicioStr = _parseHoraInicio(clase["horario"]);
+      final partes = horaInicioStr.split(':');
+      if (partes.length == 2) {
+        final hora = int.tryParse(partes[0]) ?? 0;
+        final minuto = int.tryParse(partes[1]) ?? 0;
+        final inicioClase = hoy.add(Duration(hours: hora, minutes: minuto));
+        final finVentana = inicioClase.add(const Duration(minutes: 15));
+
+        if (now.isAfter(finVentana)) {
+          noSupervisados.add(clase);
+        } else {
+          pendientes.add(clase);
+        }
+      } else {
+        // Si no se puede parsear la hora, lo dejamos en pendientes por defecto
+        pendientes.add(clase);
+      }
+    }
+
     setState(() {
-      _pendientes   = clasesAgrupadas; // <-- sólo pendientes al iniciar
-      _revisados    = [];
+      _pendientes   = pendientes;
+      _revisados    = revisados;
+      _noSupervisados = noSupervisados;
       _cargando     = false;
       _busquedaKey++;
       _expansionTileKey++;
     });
   }
-// ======= FIN BLOQUE 2 =======
 
+  // Función para agrupar clases consecutivas - FUERA de buscarClases
   List<Map<dynamic, dynamic>> _agruparClasesConsecutivas(List<dynamic> clases) {
     // Convertir a lista de mapas y ordenar por profesor, día, aula, materia y hora
     List<Map<String, dynamic>> clasesOrdenadas = clases.map((clase) {
@@ -753,7 +791,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 3),
 
                     // Mostrar el texto solo si hay resultados
-                    if (_pendientes.isNotEmpty || _revisados.isNotEmpty)
+                    if (_pendientes.isNotEmpty || _revisados.isNotEmpty || _noSupervisados.isNotEmpty)
                       Expanded(
                         child: Container(
                           padding: const EdgeInsets.all(12),
@@ -777,7 +815,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 SliverList(
                                   delegate: SliverChildBuilderDelegate(
-                                        (ctx, i) => _buildClaseCard(_pendientes[i]),
+                                        (ctx, i) => _buildClaseCard(_pendientes[i], revisado: false, noSupervisado: false),
                                     childCount: _pendientes.length,
                                   ),
                                 ),
@@ -795,8 +833,25 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 SliverList(
                                   delegate: SliverChildBuilderDelegate(
-                                        (ctx, i) => _buildClaseCard(_revisados[i], revisado: true),
+                                        (ctx, i) => _buildClaseCard(_revisados[i], revisado: true, noSupervisado: false),
                                     childCount: _revisados.length,
+                                  ),
+                                ),
+                              ],
+                              // ----------- NO SUPERVISADOS -------------
+                              if (_noSupervisados.isNotEmpty) ...[
+                                SliverPersistentHeader(
+                                  pinned: false,
+                                  delegate: _HeaderDelegate(
+                                    child: _buildSeccionTitulo('No Supervisados'),
+                                    minHeight: 40,
+                                    maxHeight: 40,
+                                  ),
+                                ),
+                                SliverList(
+                                  delegate: SliverChildBuilderDelegate(
+                                        (ctx, i) => _buildClaseCard(_noSupervisados[i], revisado: false, noSupervisado: true),
+                                    childCount: _noSupervisados.length,
                                   ),
                                 ),
                               ],
@@ -869,11 +924,29 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   );
 
-  Widget _buildClaseCard(Map<dynamic, dynamic> clase, {bool revisado = false}) {
+  Widget _buildClaseCard(Map<dynamic, dynamic> clase, {bool revisado = false, bool noSupervisado = false}) {
     final horarioParaClave = clase["horario"].toString().replaceAll(' ', '-').replaceAll(':', '');
     final claveRegistro    = "${clase["profeid"]}_$horarioParaClave";
     final asistenciaRegistrada = _asistenciasRegistradas[claveRegistro];
     final botonesDeshabilitados = revisado || asistenciaRegistrada != null;
+
+    // --- Lógica de ventana de tiempo ---
+    bool fueraDeVentana = false;
+    if (!botonesDeshabilitados) {
+      final horaInicioStr = _parseHoraInicio(clase["horario"]);
+      final now = DateTime.now();
+      final hoy = DateTime(now.year, now.month, now.day);
+
+      final partes = horaInicioStr.split(':');
+      if (partes.length == 2) {
+        final hora = int.tryParse(partes[0]) ?? 0;
+        final minuto = int.tryParse(partes[1]) ?? 0;
+        final inicioClase = hoy.add(Duration(hours: hora, minutes: minuto));
+        final finVentana = inicioClase.add(const Duration(minutes: 15));
+        // Si ya pasó la ventana, deshabilita los botones
+        fueraDeVentana = now.isAfter(finVentana);
+      }
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 13),
@@ -899,7 +972,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildInfoRow('Grupo:',   clase["grupo"]),
                 _buildInfoRow('Materia:', clase["materia"]),
                 const SizedBox(height: 10),
-                if (botonesDeshabilitados)
+
+                // --- LÓGICA CORREGIDA PARA LOS TEXTOS ---
+                if (noSupervisado)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'No se registró asistencia a tiempo',
+                      style: TextStyle(
+                        color: Colors.orange[800],
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  )
+                else if (botonesDeshabilitados)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: Text(
@@ -911,36 +998,48 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   )
-                else
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 16,
-                    runSpacing: 8,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () => _registrarAsistencia(clase, "asistio"),
-                        icon : const Icon(Icons.check_circle, size: 20),
-                        label: const Text('Asistió', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                else if (fueraDeVentana)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(
+                        'Fuera De Tiempo Para Registrar Asistencia',
+                        style: TextStyle(
+                          color: Colors.orange[800],
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: () => _registrarAsistencia(clase, "falto"),
-                        icon : const Icon(Icons.cancel, size: 20),
-                        label: const Text('Faltó',   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    )
+                  else
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 16,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () => _registrarAsistencia(clase, "asistio"),
+                          icon : const Icon(Icons.check_circle, size: 20),
+                          label: const Text('Asistió', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                        ElevatedButton.icon(
+                          onPressed: () => _registrarAsistencia(clase, "falto"),
+                          icon : const Icon(Icons.cancel, size: 20),
+                          label: const Text('Faltó',   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ],
+                    ),
                 const SizedBox(height: 10),
               ],
             ),

@@ -102,7 +102,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return exit ?? false;
   }
 
-
   @override
   void initState() {
     super.initState();
@@ -347,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final clasesAgrupadas = _agruparClasesConsecutivas(clasesFiltradas);
 
-    // --- Clasificación ---
+    // --- Clasificación de la Asistencia ---
     List<Map<dynamic, dynamic>> pendientes = [];
     List<Map<dynamic, dynamic>> revisados = [];
     List<Map<dynamic, dynamic>> noSupervisados = [];
@@ -394,7 +393,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // Función para agrupar clases consecutivas - FUERA de buscarClases
+  // Función para agrupar clases consecutivas
   List<Map<dynamic, dynamic>> _agruparClasesConsecutivas(List<dynamic> clases) {
     // Convertir a lista de mapas y ordenar por profesor, día, aula, materia y hora
     List<Map<String, dynamic>> clasesOrdenadas = clases.map((clase) {
@@ -556,42 +555,33 @@ class _HomeScreenState extends State<HomeScreen> {
       String estadoAsistencia,
       ) async {
     setState(() {
-      _cargando = true; // Muestra el indicador de carga
+      _cargando = true;
     });
 
     try {
       final app = Firebase.app();
       final database = FirebaseDatabase.instanceFor(
         app: app,
-        databaseURL:
-        'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+        databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
       );
 
       final ref = database.ref();
 
-      // 1. Obtener la fecha actual en formato YYYY-MM-DD
       final now = DateTime.now();
       final fechaActual =
           "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
-      // 2. Crear la clave única para el registro de asistencia (¡AGREGA ESTO!)
       final horarioParaClave = clase["horario"]
           .toString()
           .replaceAll(' ', '-')
           .replaceAll(':', '');
       final claveRegistro = "${clase["profeid"]}_$horarioParaClave";
 
-      //Deshabilita los botones de asistencia si ya se registró
-      final asistenciaRegistrada = _asistenciasRegistradas[claveRegistro];
-      final botonesDeshabilitados = asistenciaRegistrada != null;
-
-      // 3. Definir la ruta donde se guardará la asistencia
       final asistenciaRef = ref
           .child('asistencias')
           .child(fechaActual)
           .child(claveRegistro);
 
-      // 4. Crear el objeto de datos a guardar
       final datosAsistencia = {
         'estado': estadoAsistencia,
         'profe': clase["profe"],
@@ -600,25 +590,19 @@ class _HomeScreenState extends State<HomeScreen> {
         'grupo': clase["grupo"],
         'materia': clase["materia"],
         'horario': clase["horario"],
-        'timestamp': ServerValue.timestamp, // Guarda la hora exacta del servidor de Firebase
+        'timestamp': ServerValue.timestamp,
       };
 
-      // 5. Guardar los datos en Firebase
       await asistenciaRef.set(datosAsistencia);
 
-      // Pendientes → revisados
+      // Actualiza el mapa local
       setState(() {
         _asistenciasRegistradas[claveRegistro] = estadoAsistencia;
-
-        // Mover la tarjeta de pendientes → revisados
-        _pendientes.removeWhere((c) {
-          final key = "${c["profeid"]}_${c["horario"].toString().replaceAll(' ', '-').replaceAll(':', '')}";
-          return key == claveRegistro;
-        });
-        _revisados.add(clase);
       });
 
-      // Mostrar mensaje de éxito
+      // Vuelve a buscar las clases para refrescar las listas
+      buscarClases();
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -627,14 +611,13 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     } catch (e) {
-      // Mostrar mensaje de error
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al registrar asistencia: $e')),
       );
-      print('Error al registrar asistencia: $e'); // Para depuración
+      print('Error al registrar asistencia: $e');
     } finally {
       setState(() {
-        _cargando = false; // Oculta el indicador de carga
+        _cargando = false;
       });
     }
   }

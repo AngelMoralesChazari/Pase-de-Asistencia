@@ -605,9 +605,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Asistencia de ${clase["profe"]} registrada como "$estadoAsistencia"',
-          ),
+          content: Text('Asistencia registrada'),
+          duration: Duration(seconds: 1),
         ),
       );
     } catch (e) {
@@ -956,12 +955,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildInfoRow('Materia:', clase["materia"]),
                 const SizedBox(height: 10),
 
-                // --- LÓGICA CORREGIDA PARA LOS TEXTOS ---
+                // Logica para los textos de informacion adicionales
                 if (noSupervisado)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: Text(
-                      'No se registró asistencia a tiempo',
+                      'No Se Registró Asistencia a Tiempo',
                       style: TextStyle(
                         color: Colors.orange[800],
                         fontWeight: FontWeight.bold,

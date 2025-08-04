@@ -285,9 +285,9 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    if (_filtro1Seleccionado == null || _turnoSeleccionado == null) {
+    if (_turnoSeleccionado == null || _filtro1Seleccionado == null || _filtro2Seleccionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona turno y edificio')),
+        const SnackBar(content: Text('Selecciona Todos Los filtros por favor')),
       );
       setState(() => _cargando = false);
       return;
@@ -346,6 +346,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final clasesAgrupadas = _agruparClasesConsecutivas(clasesFiltradas);
 
+    final clasesAgrupadasFiltradas = clasesAgrupadas
+        .where((clase) => (clase['materia'] ?? '').toString().trim().isNotEmpty &&
+        (clase['profe'] ?? '').toString().trim().isNotEmpty).toList();
+
     // --- Clasificación de la Asistencia ---
     List<Map<dynamic, dynamic>> pendientes = [];
     List<Map<dynamic, dynamic>> revisados = [];
@@ -354,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final now = DateTime.now();
     final hoy = DateTime(now.year, now.month, now.day);
 
-    for (var clase in clasesAgrupadas) {
+    for (var clase in clasesAgrupadasFiltradas) {
       final horarioParaClave = clase["horario"].toString().replaceAll(' ', '-').replaceAll(':', '');
       final claveRegistro    = "${clase["profeid"]}_$horarioParaClave";
       final asistenciaRegistrada = _asistenciasRegistradas[claveRegistro];
@@ -382,6 +386,10 @@ class _HomeScreenState extends State<HomeScreen> {
         pendientes.add(clase);
       }
     }
+
+    pendientes = pendientes.where((clase) => (clase['materia'] ?? '').toString().trim().isNotEmpty).toList();
+    revisados = revisados.where((clase) => (clase['materia'] ?? '').toString().trim().isNotEmpty).toList();
+    noSupervisados = noSupervisados.where((clase) => (clase['materia'] ?? '').toString().trim().isNotEmpty).toList();
 
     setState(() {
       _pendientes   = pendientes;
@@ -463,7 +471,7 @@ class _HomeScreenState extends State<HomeScreen> {
       for (int j = i + 1; j < clasesOrdenadas.length; j++) {
         Map<String, dynamic> siguienteClase = clasesOrdenadas[j];
 
-        // Verificar si es la misma clase (mismo profesor, día, aula, materia)
+        // Verificar si es la misma clase, mismo profesor, día, aula y materia
         if (claseActual['profe'] == siguienteClase['profe'] &&
             claseActual['dia'] == siguienteClase['dia'] &&
             claseActual['aula'] == siguienteClase['aula'] &&
@@ -479,10 +487,10 @@ class _HomeScreenState extends State<HomeScreen> {
           if (_sonHorasConsecutivas(horaFinAnterior, horaInicioSiguiente)) {
             clasesConsecutivas.add(siguienteClase);
           } else {
-            break; // No son consecutivas, salir del bucle
+            break;
           }
         } else {
-          break; // No es la misma clase, salir del bucle
+          break;
         }
       }
 
@@ -764,7 +772,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           child: IconButton(
                             icon: const Icon(Icons.search, color: Colors.white),
-                            onPressed: buscarClases,
+                            onPressed: (_turnoSeleccionado != null && _filtro1Seleccionado != null && _filtro2Seleccionado != null)
+                                ? buscarClases
+                                : null,
                           ),
                         ),
                       ],
@@ -772,18 +782,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 3),
 
+                    // Aviso si no seleccionaron todos los filtros
+                    if (_turnoSeleccionado == null || _filtro1Seleccionado == null || _filtro2Seleccionado == null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12.0, bottom: 4.0),
+                        child: Text(
+                          'Por favor seleccione todos los filtros.',
+                          style: TextStyle(
+                            color: Colors.red[700],
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+
                     // Mostrar el texto solo si hay resultados
                     if (_pendientes.isNotEmpty || _revisados.isNotEmpty || _noSupervisados.isNotEmpty)
                       Expanded(
-                        child: Container(
+                        child: (_pendientes.isNotEmpty || _revisados.isNotEmpty || _noSupervisados.isNotEmpty)
+                            ? Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.95),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child:
-                          // ======= INICIO BLOQUE 5 =======
-                          CustomScrollView(
+                          child: CustomScrollView(
                             slivers: [
                               // ----------- PENDIENTES ------------
                               if (_pendientes.isNotEmpty) ...[
@@ -839,7 +863,16 @@ class _HomeScreenState extends State<HomeScreen> {
                               ],
                             ],
                           ),
-                          // ======= FIN BLOQUE 5 =======
+                        )
+                            : Center(
+                          child: Text(
+                            'No hay clases disponibles',
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
                   ],

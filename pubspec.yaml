@@ -17,12 +17,12 @@ dependencies:
   google_sign_in: ^6.1.5
   intl: ^0.20.2
 
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.0
 
 flutter_icons:
   android: true
@@ -37,4 +37,12 @@ flutter:
     - assets/images/inicio.jpg
     - assets/images/google_logo.png
     - assets/images/logo_app.jpg
+    - assets/images/fondo_de_carga.jpg
     - assets/supervisores.json
+
+flutter_native_splash:
+  background_image: assets/images/fondo_de_carga.jpg
+  android: true
+  ios: true
+  web: false
+  fullscreen: true

@@ -347,8 +347,32 @@ class _HomeScreenState extends State<HomeScreen> {
     final clasesAgrupadas = _agruparClasesConsecutivas(clasesFiltradas);
 
     final clasesAgrupadasFiltradas = clasesAgrupadas
-        .where((clase) => (clase['materia'] ?? '').toString().trim().isNotEmpty &&
-        (clase['profe'] ?? '').toString().trim().isNotEmpty).toList();
+        .where((clase) {
+      // Verificar que materia y profe no estén vacíos
+      final materia = (clase['materia'] ?? '').toString().trim();
+      final profe = (clase['profe'] ?? '').toString().trim();
+      final grupo = (clase['grupo'] ?? '').toString().trim();
+
+      // Filtrar si están vacíos o contienen "VACIO" o "sin asignar"
+      if (materia.isEmpty ||
+          materia.toUpperCase().contains('VACIO') ||
+          materia.toLowerCase().contains('sin asignar')) {
+        return false;
+      }
+
+      if (profe.isEmpty ||
+          profe.toUpperCase().contains('VACIO') ||
+          profe.toLowerCase().contains('sin asignar')) {
+        return false;
+      }
+
+      if (grupo.isEmpty ||
+          grupo.toLowerCase().contains('sin asignar')) {
+        return false;
+      }
+
+      return true;
+    }).toList();
 
     // --- Clasificación de la Asistencia ---
     List<Map<dynamic, dynamic>> pendientes = [];

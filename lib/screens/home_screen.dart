@@ -15,6 +15,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   Map<String, String> _asistenciasRegistradas = {};
+  bool _mostrarMensajeFiltros = false;
   bool _busquedaRealizada = false;
   bool _cargando = false;
   List<String> _opcionesFiltro1 = [];
@@ -286,12 +287,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (_turnoSeleccionado == null || _filtro1Seleccionado == null || _filtro2Seleccionado == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona Todos Los filtros por favor')),
-      );
-      setState(() => _cargando = false);
+      setState(() {
+        _mostrarMensajeFiltros = true;
+        _cargando = false;
+      });
       return;
     }
+
+// Si llegamos aquí, todos los filtros están seleccionados, ocultar el mensaje
+    setState(() {
+      _mostrarMensajeFiltros = false;
+    });
 
     final app = Firebase.app();
     final database = FirebaseDatabase.instanceFor(
@@ -796,9 +802,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           child: IconButton(
                             icon: const Icon(Icons.search, color: Colors.white),
-                            onPressed: (_turnoSeleccionado != null && _filtro1Seleccionado != null && _filtro2Seleccionado != null)
-                                ? buscarClases
-                                : null,
+                            onPressed: buscarClases,
                           ),
                         ),
                       ],
@@ -807,11 +811,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 3),
 
                     // Aviso si no seleccionaron todos los filtros
-                    if (_turnoSeleccionado == null || _filtro1Seleccionado == null || _filtro2Seleccionado == null)
+                    // Aviso si no seleccionaron todos los filtros AL HACER CLIC EN BUSCAR
+                    if (_mostrarMensajeFiltros)
                       Padding(
                         padding: const EdgeInsets.only(top: 12.0, bottom: 4.0),
                         child: Text(
-                          'Por favor seleccione todos los filtros.',
+                          'Por favor seleccione todos los filtros antes de buscar.',
                           style: TextStyle(
                             color: Colors.red[700],
                             fontWeight: FontWeight.w600,

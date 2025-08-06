@@ -34,9 +34,9 @@ class _HomeScreenState extends State<HomeScreen> {
   int _busquedaKey = 0;
   int _expansionTileKey = 0;
 
-  List<Map<dynamic, dynamic>> _pendientes = [];   // Clases sin revisar
-  List<Map<dynamic, dynamic>> _revisados  = [];   // Clases ya revisadas
-  List<Map<dynamic, dynamic>> _noSupervisados = [];  // Clases fuera de tiempo
+  List<Map<dynamic, dynamic>> _pendientes = []; // Clases sin revisar
+  List<Map<dynamic, dynamic>> _revisados = []; // Clases ya revisadas
+  List<Map<dynamic, dynamic>> _noSupervisados = []; // Clases fuera de tiempo
 
   // Función para quitar tildes y normalizar texto
   String quitarTildes(String str) {
@@ -135,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final database = FirebaseDatabase.instanceFor(
       app: app,
       databaseURL:
-      'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+          'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
     );
 
     final ref = database.ref();
@@ -179,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       final edificiosFinales =
-      edificiosNumericos.map((e) => "Edificio $e").toList()..sort();
+          edificiosNumericos.map((e) => "Edificio $e").toList()..sort();
 
       final horasFinales = horas.toList()
         ..sort((a, b) {
@@ -199,13 +199,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<List<String>> _filtrarHorasPorEdificio(
-      String edificioSeleccionado,
-      ) async {
+    String edificioSeleccionado,
+  ) async {
     final app = Firebase.app();
     final database = FirebaseDatabase.instanceFor(
       app: app,
       databaseURL:
-      'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+          'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
     );
 
     final ref = database.ref();
@@ -278,16 +278,18 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_diaActual == null) {
       setState(() {
         _pendientes = [];
-        _revisados  = [];
+        _revisados = [];
         _noSupervisados = [];
-        _cargando   = false;
+        _cargando = false;
         _busquedaKey++;
         _expansionTileKey++;
       });
       return;
     }
 
-    if (_turnoSeleccionado == null || _filtro1Seleccionado == null || _filtro2Seleccionado == null) {
+    if (_turnoSeleccionado == null ||
+        _filtro1Seleccionado == null ||
+        _filtro2Seleccionado == null) {
       setState(() {
         _mostrarMensajeFiltros = true;
         _cargando = false;
@@ -295,7 +297,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-// Si llegamos aquí, todos los filtros están seleccionados, ocultar el mensaje
+    // Si llegamos aquí, todos los filtros están seleccionados, ocultar el mensaje
     setState(() {
       _mostrarMensajeFiltros = false;
     });
@@ -303,7 +305,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final app = Firebase.app();
     final database = FirebaseDatabase.instanceFor(
       app: app,
-      databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+      databaseURL:
+          'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
     );
 
     final ref = database.ref();
@@ -327,7 +330,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final aula = clase['A']?.toString() ?? '';
       final hora = clase['B']?.toString() ?? '';
-      final edificio = aula.isNotEmpty ? "Edificio ${aula.substring(0, 1)}" : '';
+      final edificio = aula.isNotEmpty
+          ? "Edificio ${aula.substring(0, 1)}"
+          : '';
 
       if (edificio != _filtro1Seleccionado) return false;
 
@@ -337,14 +342,16 @@ class _HomeScreenState extends State<HomeScreen> {
       final horaNum = int.tryParse(horaInicio.split(':')[0]) ?? 0;
 
       if (_turnoSeleccionado == 'AM' && horaNum >= 12) return false;
-      if (_turnoSeleccionado == 'PM' && horaNum < 12)  return false;
+      if (_turnoSeleccionado == 'PM' && horaNum < 12) return false;
 
       if (_filtro2Seleccionado != null && horaInicio != _filtro2Seleccionado) {
         return false;
       }
 
       if (_diaActual != null) {
-        final diaClase  = quitarTildes(clase['C']?.toString().trim().toLowerCase() ?? '');
+        final diaClase = quitarTildes(
+          clase['C']?.toString().trim().toLowerCase() ?? '',
+        );
         final diaActual = quitarTildes(_diaActual!.trim().toLowerCase());
         if (diaClase != diaActual) return false;
       }
@@ -353,8 +360,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final clasesAgrupadas = _agruparClasesConsecutivas(clasesFiltradas);
 
-    final clasesAgrupadasFiltradas = clasesAgrupadas
-        .where((clase) {
+    final clasesAgrupadasFiltradas = clasesAgrupadas.where((clase) {
       // Verificar que materia y profe no estén vacíos
       final materia = (clase['materia'] ?? '').toString().trim();
       final profe = (clase['profe'] ?? '').toString().trim();
@@ -373,8 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return false;
       }
 
-      if (grupo.isEmpty ||
-          grupo.toLowerCase().contains('sin asignar')) {
+      if (grupo.isEmpty || grupo.toLowerCase().contains('sin asignar')) {
         return false;
       }
 
@@ -390,8 +395,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final hoy = DateTime(now.year, now.month, now.day);
 
     for (var clase in clasesAgrupadasFiltradas) {
-      final horarioParaClave = clase["horario"].toString().replaceAll(' ', '-').replaceAll(':', '');
-      final claveRegistro    = "${clase["profeid"]}_$horarioParaClave";
+      final horarioParaClave = clase["horario"]
+          .toString()
+          .replaceAll(' ', '-')
+          .replaceAll(':', '');
+      final claveRegistro = "${clase["profeid"]}_$horarioParaClave";
       final asistenciaRegistrada = _asistenciasRegistradas[claveRegistro];
 
       if (asistenciaRegistrada != null) {
@@ -418,15 +426,21 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    pendientes = pendientes.where((clase) => (clase['materia'] ?? '').toString().trim().isNotEmpty).toList();
-    revisados = revisados.where((clase) => (clase['materia'] ?? '').toString().trim().isNotEmpty).toList();
-    noSupervisados = noSupervisados.where((clase) => (clase['materia'] ?? '').toString().trim().isNotEmpty).toList();
+    pendientes = pendientes
+        .where((clase) => (clase['materia'] ?? '').toString().trim().isNotEmpty)
+        .toList();
+    revisados = revisados
+        .where((clase) => (clase['materia'] ?? '').toString().trim().isNotEmpty)
+        .toList();
+    noSupervisados = noSupervisados
+        .where((clase) => (clase['materia'] ?? '').toString().trim().isNotEmpty)
+        .toList();
 
     setState(() {
-      _pendientes   = pendientes;
-      _revisados    = revisados;
+      _pendientes = pendientes;
+      _revisados = revisados;
       _noSupervisados = noSupervisados;
-      _cargando     = false;
+      _cargando = false;
       _busquedaKey++;
       _expansionTileKey++;
     });
@@ -590,9 +604,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // --- Funciones de asistencias ---
 
   Future<void> _registrarAsistencia(
-      Map<dynamic, dynamic> clase,
-      String estadoAsistencia,
-      ) async {
+    Map<dynamic, dynamic> clase,
+    String estadoAsistencia,
+  ) async {
     setState(() {
       _cargando = true;
     });
@@ -601,7 +615,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final app = Firebase.app();
       final database = FirebaseDatabase.instanceFor(
         app: app,
-        databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+        databaseURL:
+            'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
       );
 
       final ref = database.ref();
@@ -710,9 +725,9 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Image.asset('assets/images/inicio.jpg', fit: BoxFit.cover),
             ),
             SafeArea(
-                child: _mostrarPanelFiltros
-                    ? _buildPanelFiltrosYResultados()
-                    : _buildTablaAulasNoRevisadas(),
+              child: _mostrarPanelFiltros
+                  ? _buildPanelFiltrosYResultados()
+                  : _buildTablaAulasNoRevisadas(),
             ),
             if (_cargando)
               Positioned.fill(
@@ -751,8 +766,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     });
 
                     if (_filtro1Seleccionado != null && value != null) {
-                      final horasDelEdificio =
-                      await _filtrarHorasPorEdificio(_filtro1Seleccionado!);
+                      final horasDelEdificio = await _filtrarHorasPorEdificio(
+                        _filtro1Seleccionado!,
+                      );
                       setState(() {
                         _opcionesFiltro2 = filtrarHorasPorTurno(
                           value,
@@ -783,8 +799,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     });
 
                     if (value != null) {
-                      final horasDelEdificio =
-                      await _filtrarHorasPorEdificio(value);
+                      final horasDelEdificio = await _filtrarHorasPorEdificio(
+                        value,
+                      );
                       setState(() {
                         _opcionesFiltro2 = horasDelEdificio;
                       });
@@ -840,81 +857,93 @@ class _HomeScreenState extends State<HomeScreen> {
               _revisados.isNotEmpty ||
               _noSupervisados.isNotEmpty)
             Expanded(
-              child: (_pendientes.isNotEmpty ||
-                  _revisados.isNotEmpty ||
-                  _noSupervisados.isNotEmpty)
+              child:
+                  (_pendientes.isNotEmpty ||
+                      _revisados.isNotEmpty ||
+                      _noSupervisados.isNotEmpty)
                   ? Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: CustomScrollView(
-                  slivers: [
-                    if (_pendientes.isNotEmpty) ...[
-                      SliverPersistentHeader(
-                        pinned: false,
-                        delegate: _HeaderDelegate(
-                          child: _buildSeccionTitulo('Pendientes Por Revisar'),
-                          minHeight: 40,
-                          maxHeight: 40,
-                        ),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                              (ctx, i) => _buildClaseCard(_pendientes[i],
-                              revisado: false, noSupervisado: false),
-                          childCount: _pendientes.length,
-                        ),
+                      child: CustomScrollView(
+                        slivers: [
+                          if (_pendientes.isNotEmpty) ...[
+                            SliverPersistentHeader(
+                              pinned: false,
+                              delegate: _HeaderDelegate(
+                                child: _buildSeccionTitulo(
+                                  'Pendientes Por Revisar',
+                                ),
+                                minHeight: 40,
+                                maxHeight: 40,
+                              ),
+                            ),
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (ctx, i) => _buildClaseCard(
+                                  _pendientes[i],
+                                  revisado: false,
+                                  noSupervisado: false,
+                                ),
+                                childCount: _pendientes.length,
+                              ),
+                            ),
+                          ],
+                          if (_revisados.isNotEmpty) ...[
+                            SliverPersistentHeader(
+                              pinned: false,
+                              delegate: _HeaderDelegate(
+                                child: _buildSeccionTitulo('Revisados'),
+                                minHeight: 40,
+                                maxHeight: 40,
+                              ),
+                            ),
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (ctx, i) => _buildClaseCard(
+                                  _revisados[i],
+                                  revisado: true,
+                                  noSupervisado: false,
+                                ),
+                                childCount: _revisados.length,
+                              ),
+                            ),
+                          ],
+                          if (_noSupervisados.isNotEmpty) ...[
+                            SliverPersistentHeader(
+                              pinned: false,
+                              delegate: _HeaderDelegate(
+                                child: _buildSeccionTitulo('No Supervisados'),
+                                minHeight: 40,
+                                maxHeight: 40,
+                              ),
+                            ),
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (ctx, i) => _buildClaseCard(
+                                  _noSupervisados[i],
+                                  revisado: false,
+                                  noSupervisado: true,
+                                ),
+                                childCount: _noSupervisados.length,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                    ],
-                    if (_revisados.isNotEmpty) ...[
-                      SliverPersistentHeader(
-                        pinned: false,
-                        delegate: _HeaderDelegate(
-                          child: _buildSeccionTitulo('Revisados'),
-                          minHeight: 40,
-                          maxHeight: 40,
-                        ),
-                      ),
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                              (ctx, i) => _buildClaseCard(_revisados[i],
-                              revisado: true, noSupervisado: false),
-                          childCount: _revisados.length,
-                        ),
-                      ),
-                    ],
-                    if (_noSupervisados.isNotEmpty) ...[
-                      SliverPersistentHeader(
-                        pinned: false,
-                        delegate: _HeaderDelegate(
-                          child: _buildSeccionTitulo('No Supervisados'),
-                          minHeight: 40,
-                          maxHeight: 40,
-                        ),
-                      ),
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                              (ctx, i) => _buildClaseCard(_noSupervisados[i],
-                              revisado: false, noSupervisado: true),
-                          childCount: _noSupervisados.length,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              )
+                    )
                   : Center(
-                child: Text(
-                  'No hay clases disponibles',
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+                      child: Text(
+                        'No hay clases disponibles',
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
             ),
         ],
       ),
@@ -927,22 +956,42 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 80),
+          const SizedBox(height: 125),
           Text(
             'Aulas Aun No Revisadas',
             style: TextStyle(
               fontSize: 24,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w800,
               color: Color(0xFF193863),
               letterSpacing: 1.1,
             ),
           ),
-          const SizedBox(height: 32),
-          // Tabla vacía (puedes personalizarla después)
+          const SizedBox(height: 15),
+          // Tabla vacía
           DataTable(
             columns: const [
-              DataColumn(label: Text('Aula')),
-              DataColumn(label: Text('Estado')),
+              DataColumn(
+                label: Text(
+                  'Aula',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF193863),
+                    letterSpacing: 1.1,
+                  ),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Estado',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF193863),
+                    letterSpacing: 1.1,
+                  ),
+                ),
+              ),
             ],
             rows: const [], // Sin datos por ahora
           ),
@@ -964,7 +1013,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: const Text(
                 'Continuar Revisión',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.1,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -1019,9 +1073,16 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   );
 
-  Widget _buildClaseCard(Map<dynamic, dynamic> clase, {bool revisado = false, bool noSupervisado = false}) {
-    final horarioParaClave = clase["horario"].toString().replaceAll(' ', '-').replaceAll(':', '');
-    final claveRegistro    = "${clase["profeid"]}_$horarioParaClave";
+  Widget _buildClaseCard(
+    Map<dynamic, dynamic> clase, {
+    bool revisado = false,
+    bool noSupervisado = false,
+  }) {
+    final horarioParaClave = clase["horario"]
+        .toString()
+        .replaceAll(' ', '-')
+        .replaceAll(':', '');
+    final claveRegistro = "${clase["profeid"]}_$horarioParaClave";
     final asistenciaRegistrada = _asistenciasRegistradas[claveRegistro];
     final botonesDeshabilitados = revisado || asistenciaRegistrada != null;
 
@@ -1050,12 +1111,19 @@ class _HomeScreenState extends State<HomeScreen> {
         side: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1.0),
       ),
       child: ExpansionTile(
-        key: ValueKey('$_expansionTileKey-${clase["profe"]}-${clase["aula"]}-${clase["horario"]}'),
-        title: Text(clase["profe"], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        key: ValueKey(
+          '$_expansionTileKey-${clase["profe"]}-${clase["aula"]}-${clase["horario"]}',
+        ),
+        title: Text(
+          clase["profe"],
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         collapsedBackgroundColor: Colors.white,
         backgroundColor: Colors.grey[200],
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        collapsedShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1063,8 +1131,8 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildInfoRow('Horario:', clase["horario"]),
-                _buildInfoRow('Aula:',    clase["aula"]),
-                _buildInfoRow('Grupo:',   clase["grupo"]),
+                _buildInfoRow('Aula:', clase["aula"]),
+                _buildInfoRow('Grupo:', clase["grupo"]),
                 _buildInfoRow('Materia:', clase["materia"]),
                 const SizedBox(height: 10),
 
@@ -1087,54 +1155,78 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Text(
                       'Asistencia Registrada: ${asistenciaRegistrada == "asistio" ? "Asistió" : "Faltó"}',
                       style: TextStyle(
-                        color: asistenciaRegistrada == "asistio" ? Colors.green : Colors.red,
+                        color: asistenciaRegistrada == "asistio"
+                            ? Colors.green
+                            : Colors.red,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
                   )
                 else if (fueraDeVentana)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Text(
-                        'Fuera De Tiempo Para Registrar Asistencia',
-                        style: TextStyle(
-                          color: Colors.orange[800],
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'Fuera De Tiempo Para Registrar Asistencia',
+                      style: TextStyle(
+                        color: Colors.orange[800],
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  )
+                else
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 16,
+                    runSpacing: 8,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => _registrarAsistencia(clase, "asistio"),
+                        icon: const Icon(Icons.check_circle, size: 20),
+                        label: const Text(
+                          'Asistió',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                       ),
-                    )
-                  else
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 16,
-                      runSpacing: 8,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: () => _registrarAsistencia(clase, "asistio"),
-                          icon : const Icon(Icons.check_circle, size: 20),
-                          label: const Text('Asistió', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ElevatedButton.icon(
+                        onPressed: () => _registrarAsistencia(clase, "falto"),
+                        icon: const Icon(Icons.cancel, size: 20),
+                        label: const Text(
+                          'Faltó',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                        ElevatedButton.icon(
-                          onPressed: () => _registrarAsistencia(clase, "falto"),
-                          icon : const Icon(Icons.cancel, size: 20),
-                          label: const Text('Faltó',   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 10),
               ],
             ),
@@ -1143,7 +1235,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-// ======= FIN BLOQUE 4 =======
+
+  // ======= FIN BLOQUE 4 =======
 }
 
 class _HeaderDelegate extends SliverPersistentHeaderDelegate {
@@ -1159,10 +1252,10 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context,
-      double shrinkOffset,
-      bool overlapsContent,
-      ) {
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return child;
   }
 

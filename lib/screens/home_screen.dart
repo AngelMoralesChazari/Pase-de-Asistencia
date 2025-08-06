@@ -751,7 +751,35 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          const SizedBox(height: 125),
+          const SizedBox(height: 50), // Ajusta el espacio para el botón
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _mostrarPanelFiltros = false;
+                });
+              },
+              icon: Icon(
+                  Icons.arrow_back,
+                color: Colors.white,
+              ),
+              label: Text(
+                  'Regresar',
+                style: TextStyle(
+                  color: Colors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF193863),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
           Row(
             children: [
               //Configuracion Turno
@@ -860,92 +888,92 @@ class _HomeScreenState extends State<HomeScreen> {
               _noSupervisados.isNotEmpty)
             Expanded(
               child:
-                  (_pendientes.isNotEmpty ||
-                      _revisados.isNotEmpty ||
-                      _noSupervisados.isNotEmpty)
+              (_pendientes.isNotEmpty ||
+                  _revisados.isNotEmpty ||
+                  _noSupervisados.isNotEmpty)
                   ? Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.95),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: CustomScrollView(
-                        slivers: [
-                          if (_pendientes.isNotEmpty) ...[
-                            SliverPersistentHeader(
-                              pinned: false,
-                              delegate: _HeaderDelegate(
-                                child: _buildSeccionTitulo(
-                                  'Pendientes Por Revisar',
-                                ),
-                                minHeight: 40,
-                                maxHeight: 40,
-                              ),
-                            ),
-                            SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (ctx, i) => _buildClaseCard(
-                                  _pendientes[i],
-                                  revisado: false,
-                                  noSupervisado: false,
-                                ),
-                                childCount: _pendientes.length,
-                              ),
-                            ),
-                          ],
-                          if (_revisados.isNotEmpty) ...[
-                            SliverPersistentHeader(
-                              pinned: false,
-                              delegate: _HeaderDelegate(
-                                child: _buildSeccionTitulo('Revisados'),
-                                minHeight: 40,
-                                maxHeight: 40,
-                              ),
-                            ),
-                            SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (ctx, i) => _buildClaseCard(
-                                  _revisados[i],
-                                  revisado: true,
-                                  noSupervisado: false,
-                                ),
-                                childCount: _revisados.length,
-                              ),
-                            ),
-                          ],
-                          if (_noSupervisados.isNotEmpty) ...[
-                            SliverPersistentHeader(
-                              pinned: false,
-                              delegate: _HeaderDelegate(
-                                child: _buildSeccionTitulo('No Supervisados'),
-                                minHeight: 40,
-                                maxHeight: 40,
-                              ),
-                            ),
-                            SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (ctx, i) => _buildClaseCard(
-                                  _noSupervisados[i],
-                                  revisado: false,
-                                  noSupervisado: true,
-                                ),
-                                childCount: _noSupervisados.length,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    )
-                  : Center(
-                      child: Text(
-                        'No hay clases disponibles',
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w600,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: CustomScrollView(
+                  slivers: [
+                    if (_pendientes.isNotEmpty) ...[
+                      SliverPersistentHeader(
+                        pinned: false,
+                        delegate: _HeaderDelegate(
+                          child: _buildSeccionTitulo(
+                            'Pendientes Por Revisar',
+                          ),
+                          minHeight: 40,
+                          maxHeight: 40,
                         ),
                       ),
-                    ),
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                              (ctx, i) => _buildClaseCard(
+                            _pendientes[i],
+                            revisado: false,
+                            noSupervisado: false,
+                          ),
+                          childCount: _pendientes.length,
+                        ),
+                      ),
+                    ],
+                    if (_revisados.isNotEmpty) ...[
+                      SliverPersistentHeader(
+                        pinned: false,
+                        delegate: _HeaderDelegate(
+                          child: _buildSeccionTitulo('Revisados'),
+                          minHeight: 40,
+                          maxHeight: 40,
+                        ),
+                      ),
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                              (ctx, i) => _buildClaseCard(
+                            _revisados[i],
+                            revisado: true,
+                            noSupervisado: false,
+                          ),
+                          childCount: _revisados.length,
+                        ),
+                      ),
+                    ],
+                    if (_noSupervisados.isNotEmpty) ...[
+                      SliverPersistentHeader(
+                        pinned: false,
+                        delegate: _HeaderDelegate(
+                          child: _buildSeccionTitulo('No Supervisados'),
+                          minHeight: 40,
+                          maxHeight: 40,
+                        ),
+                      ),
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                              (ctx, i) => _buildClaseCard(
+                            _noSupervisados[i],
+                            revisado: false,
+                            noSupervisado: true,
+                          ),
+                          childCount: _noSupervisados.length,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              )
+                  : Center(
+                child: Text(
+                  'No hay clases disponibles',
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ),
         ],
       ),

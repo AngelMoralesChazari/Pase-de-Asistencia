@@ -15,6 +15,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   Map<String, String> _asistenciasRegistradas = {};
+  String? _edificioSeleccionado;
+  bool _mostrarTablaEdificio = false;
   bool _mostrarMensajeFiltros = false;
   bool _busquedaRealizada = false;
   bool _cargando = false;
@@ -951,19 +953,86 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildEdificioIcono(String nombre) {
-    return Column(
-      children: [
-        Icon(Icons.location_city, size: 40, color: Color(0xFF193863)),
-        const SizedBox(height: 5),
-        Text(
-          nombre,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF193863),
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (_edificioSeleccionado == nombre && _mostrarTablaEdificio) {
+            // Si ya está seleccionado, ocultar la tabla
+            _mostrarTablaEdificio = false;
+            _edificioSeleccionado = null;
+          } else {
+            _edificioSeleccionado = nombre;
+            _mostrarTablaEdificio = true;
+          }
+        });
+      },
+      child: Column(
+        children: [
+          Icon(Icons.location_city, size: 40, color: Color(0xFF193863)),
+          const SizedBox(height: 5),
+          Text(
+            nombre,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF193863),
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTablaEdificio() {
+    // Ejemplo de filas, reemplaza con datos reales según el edificio seleccionado
+    final filasEjemplo = [
+      {'aula': '101', 'status': 'Pendiente'},
+      {'aula': '102', 'status': 'Revisado'},
+      {'aula': '103', 'status': 'Pendiente'},
+    ];
+
+    return Container(
+      height: 200, // altura fija para scroll
+      margin: const EdgeInsets.only(top: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Color(0xFF193863)),
+      ),
+      child: SingleChildScrollView(
+        child: DataTable(
+          columns: const [
+            DataColumn(
+              label: Text(
+                'Aula',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF193863),
+                ),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'Status',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF193863),
+                ),
+              ),
+            ),
+          ],
+          rows: filasEjemplo.map((fila) {
+            return DataRow(
+              cells: [
+                DataCell(Text(fila['aula']!)),
+                DataCell(Text(fila['status']!)),
+              ],
+            );
+          }).toList(),
         ),
-      ],
+      ),
     );
   }
 
@@ -1015,7 +1084,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(height: 30),
 
-          // Mapa/diagrama de edificios
+          // Fila de edificios
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -1026,6 +1095,9 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildEdificioIcono('Edificio 5'),
             ],
           ),
+
+          // Mostrar tabla del edificio seleccionado solo si _mostrarTablaEdificio es true
+          if (_mostrarTablaEdificio) _buildTablaEdificio(),
 
           const Spacer(),
 

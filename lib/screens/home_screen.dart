@@ -952,12 +952,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildEdificioIcono(String nombre) {
+  Widget _buildEdificioIcono(String nombre, bool seleccionado) {
     return GestureDetector(
       onTap: () {
         setState(() {
           if (_edificioSeleccionado == nombre && _mostrarTablaEdificio) {
-            // Si ya está seleccionado, ocultar la tabla
             _mostrarTablaEdificio = false;
             _edificioSeleccionado = null;
           } else {
@@ -966,19 +965,22 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         });
       },
-      child: Column(
-        children: [
-          Icon(Icons.location_city, size: 40, color: Color(0xFF193863)),
-          const SizedBox(height: 5),
-          Text(
-            nombre,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF193863),
+      child: Opacity(
+        opacity: seleccionado ? 1.0 : 0.4, // Opaco si seleccionado, opaco reducido si no
+        child: Column(
+          children: [
+            Icon(Icons.location_city, size: 40, color: Color(0xFF193863)),
+            const SizedBox(height: 5),
+            Text(
+              nombre,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF193863),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -989,16 +991,36 @@ class _HomeScreenState extends State<HomeScreen> {
       {'aula': '101', 'status': 'Pendiente'},
       {'aula': '102', 'status': 'Revisado'},
       {'aula': '103', 'status': 'Pendiente'},
+      {'aula': '101', 'status': 'Pendiente'},
+      {'aula': '102', 'status': 'Revisado'},
+      {'aula': '103', 'status': 'Pendiente'},
+      {'aula': '101', 'status': 'Pendiente'},
+      {'aula': '102', 'status': 'Revisado'},
+      {'aula': '103', 'status': 'Pendiente'},
+      {'aula': '101', 'status': 'Pendiente'},
+      {'aula': '102', 'status': 'Revisado'},
+      {'aula': '103', 'status': 'Pendiente'},
+      {'aula': '101', 'status': 'Pendiente'},
+      {'aula': '102', 'status': 'Revisado'},
+      {'aula': '103', 'status': 'Pendiente'},
+      {'aula': '101', 'status': 'Pendiente'},
+      {'aula': '102', 'status': 'Revisado'},
+      {'aula': '103', 'status': 'Pendiente'},
     ];
 
     return Container(
-      height: 200, // altura fija para scroll
-      margin: const EdgeInsets.only(top: 16),
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Color(0xFF193863)),
       ),
+      constraints: BoxConstraints(
+      maxHeight: 450, // altura fija para scroll
+      ),
+      //margin: const EdgeInsets.only(top: 20),
       child: SingleChildScrollView(
         child: DataTable(
           columns: const [
@@ -1007,7 +1029,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 'Aula',
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   color: Color(0xFF193863),
                 ),
               ),
@@ -1017,7 +1039,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 'Status',
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   color: Color(0xFF193863),
                 ),
               ),
@@ -1051,52 +1073,22 @@ class _HomeScreenState extends State<HomeScreen> {
               letterSpacing: 1.1,
             ),
           ),
-          const SizedBox(height: 15),
 
-          // Tabla vacía
-          DataTable(
-            columns: const [
-              DataColumn(
-                label: Text(
-                  'Aula',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF193863),
-                    letterSpacing: 1.1,
-                  ),
-                ),
-              ),
-              DataColumn(
-                label: Text(
-                  'Estado',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF193863),
-                    letterSpacing: 1.1,
-                  ),
-                ),
-              ),
-            ],
-            rows: const [], // Sin datos por ahora
-          ),
-
-          const SizedBox(height: 30),
+          const SizedBox(height: 20),
 
           // Fila de edificios
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildEdificioIcono('Edificio 1'),
-              _buildEdificioIcono('Edificio 2'),
-              _buildEdificioIcono('Edificio 3'),
-              _buildEdificioIcono('Edificio 4'),
-              _buildEdificioIcono('Edificio 5'),
+              _buildEdificioIcono('Edificio 1', _edificioSeleccionado == 'Edificio 1'),
+              _buildEdificioIcono('Edificio 2', _edificioSeleccionado == 'Edificio 2'),
+              _buildEdificioIcono('Edificio 3', _edificioSeleccionado == 'Edificio 3'),
+              _buildEdificioIcono('Edificio 4', _edificioSeleccionado == 'Edificio 4'),
+              _buildEdificioIcono('Edificio 5', _edificioSeleccionado == 'Edificio 5'),
             ],
           ),
 
-          // Mostrar tabla del edificio seleccionado solo si _mostrarTablaEdificio es true
+          // Mostrar tabla del edificio seleccionado
           if (_mostrarTablaEdificio) _buildTablaEdificio(),
 
           const Spacer(),

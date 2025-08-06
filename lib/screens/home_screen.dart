@@ -34,11 +34,11 @@ class _HomeScreenState extends State<HomeScreen> {
   int _busquedaKey = 0;
   int _expansionTileKey = 0;
 
-  List<Map<dynamic, dynamic>> _pendientes = []; // Clases sin revisar
-  List<Map<dynamic, dynamic>> _revisados = []; // Clases ya revisadas
-  List<Map<dynamic, dynamic>> _noSupervisados = []; // Clases fuera de tiempo
+  List<Map<dynamic, dynamic>> _pendientes = [];
+  List<Map<dynamic, dynamic>> _revisados = [];
+  List<Map<dynamic, dynamic>> _noSupervisados = [];
 
-  // Función para quitar tildes y normalizar texto
+  // Función para normalizar texto
   String quitarTildes(String str) {
     return str
         .replaceAll('á', 'a')
@@ -950,11 +950,27 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildEdificioIcono(String nombre) {
+    return Column(
+      children: [
+        Icon(Icons.location_city, size: 40, color: Color(0xFF193863)),
+        const SizedBox(height: 5),
+        Text(
+          nombre,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF193863),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTablaAulasNoRevisadas() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const SizedBox(height: 125),
           Text(
@@ -967,6 +983,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 15),
+
           // Tabla vacía
           DataTable(
             columns: const [
@@ -995,7 +1012,23 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
             rows: const [], // Sin datos por ahora
           ),
+
+          const SizedBox(height: 30),
+
+          // Mapa/diagrama de edificios
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildEdificioIcono('Edificio 1'),
+              _buildEdificioIcono('Edificio 2'),
+              _buildEdificioIcono('Edificio 3'),
+              _buildEdificioIcono('Edificio 4'),
+              _buildEdificioIcono('Edificio 5'),
+            ],
+          ),
+
           const Spacer(),
+
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -1235,6 +1268,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+
 
   // ======= FIN BLOQUE 4 =======
 }

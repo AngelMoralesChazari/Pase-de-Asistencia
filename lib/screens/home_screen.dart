@@ -18,6 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _mostrarMensajeFiltros = false;
   bool _busquedaRealizada = false;
   bool _cargando = false;
+  bool _mostrarPanelFiltros = false;
   List<String> _opcionesFiltro1 = [];
   List<String> _opcionesFiltro2 = [];
   List<String> _todasLasHoras = [];
@@ -708,205 +709,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Positioned.fill(
               child: Image.asset('assets/images/inicio.jpg', fit: BoxFit.cover),
             ),
-
             SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 125),
-                    Row(
-                      children: [
-                        //Configuracion Turno
-                        SizedBox(
-                          width: 80,
-                          child: _buildFiltro(
-                            value: _turnoSeleccionado,
-                            opciones: _opcionesTurno,
-                            hint: 'Turno',
-                            onChanged: (value) async {
-                              setState(() {
-                                _turnoSeleccionado = value;
-                                _filtro2Seleccionado = null;
-                              });
-
-                              // Si hay edificio seleccionado, actualizar horas por edificio y turno
-                              if (_filtro1Seleccionado != null &&
-                                  value != null) {
-                                final horasDelEdificio =
-                                await _filtrarHorasPorEdificio(
-                                  _filtro1Seleccionado!,
-                                );
-                                setState(() {
-                                  _opcionesFiltro2 = filtrarHorasPorTurno(
-                                    value,
-                                    horasDelEdificio,
-                                  );
-                                });
-                              } else {
-                                setState(() {
-                                  _opcionesFiltro2 = [];
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-
-                        //Configuracion Edificio
-                        SizedBox(
-                          width: 120,
-                          child: _buildFiltro(
-                            value: _filtro1Seleccionado,
-                            opciones: _opcionesFiltro1,
-                            hint: 'Edificio',
-                            onChanged: (value) async {
-                              setState(() {
-                                _filtro1Seleccionado = value;
-                                _filtro2Seleccionado = null;
-                              });
-
-                              // Filtrar horas por edificio seleccionado
-                              if (value != null) {
-                                final horasDelEdificio =
-                                await _filtrarHorasPorEdificio(value);
-                                setState(() {
-                                  _opcionesFiltro2 = horasDelEdificio;
-                                });
-                              } else {
-                                setState(() {
-                                  _opcionesFiltro2 = [];
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _buildFiltro(
-                            value: _filtro2Seleccionado,
-                            opciones: _opcionesFiltro2,
-                            hint: 'Hora',
-                            onChanged: (value) {
-                              setState(() => _filtro2Seleccionado = value);
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: Colors.blue,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.search, color: Colors.white),
-                            onPressed: buscarClases,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 3),
-
-                    // Aviso si no seleccionaron todos los filtros
-                    // Aviso si no seleccionaron todos los filtros AL HACER CLIC EN BUSCAR
-                    if (_mostrarMensajeFiltros)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12.0, bottom: 4.0),
-                        child: Text(
-                          'Por favor seleccione todos los filtros antes de buscar.',
-                          style: TextStyle(
-                            color: Colors.red[700],
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-
-                    // Mostrar el texto solo si hay resultados
-                    if (_pendientes.isNotEmpty || _revisados.isNotEmpty || _noSupervisados.isNotEmpty)
-                      Expanded(
-                        child: (_pendientes.isNotEmpty || _revisados.isNotEmpty || _noSupervisados.isNotEmpty)
-                            ? Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.95),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: CustomScrollView(
-                            slivers: [
-                              // ----------- PENDIENTES ------------
-                              if (_pendientes.isNotEmpty) ...[
-                                SliverPersistentHeader(
-                                  pinned: false,
-                                  delegate: _HeaderDelegate(
-                                    child: _buildSeccionTitulo('Pendientes Por Revisar'),
-                                    minHeight: 40,
-                                    maxHeight: 40,
-                                  ),
-                                ),
-                                SliverList(
-                                  delegate: SliverChildBuilderDelegate(
-                                        (ctx, i) => _buildClaseCard(_pendientes[i], revisado: false, noSupervisado: false),
-                                    childCount: _pendientes.length,
-                                  ),
-                                ),
-                              ],
-
-                              // ----------- REVISADOS -------------
-                              if (_revisados.isNotEmpty) ...[
-                                SliverPersistentHeader(
-                                  pinned: false,
-                                  delegate: _HeaderDelegate(
-                                    child: _buildSeccionTitulo('Revisados'),
-                                    minHeight: 40,
-                                    maxHeight: 40,
-                                  ),
-                                ),
-                                SliverList(
-                                  delegate: SliverChildBuilderDelegate(
-                                        (ctx, i) => _buildClaseCard(_revisados[i], revisado: true, noSupervisado: false),
-                                    childCount: _revisados.length,
-                                  ),
-                                ),
-                              ],
-                              // ----------- NO SUPERVISADOS -------------
-                              if (_noSupervisados.isNotEmpty) ...[
-                                SliverPersistentHeader(
-                                  pinned: false,
-                                  delegate: _HeaderDelegate(
-                                    child: _buildSeccionTitulo('No Supervisados'),
-                                    minHeight: 40,
-                                    maxHeight: 40,
-                                  ),
-                                ),
-                                SliverList(
-                                  delegate: SliverChildBuilderDelegate(
-                                        (ctx, i) => _buildClaseCard(_noSupervisados[i], revisado: false, noSupervisado: true),
-                                    childCount: _noSupervisados.length,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        )
-                            : Center(
-                          child: Text(
-                            'No hay clases disponibles',
-                            style: TextStyle(
-                              fontSize: 20,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+                child: _mostrarPanelFiltros
+                    ? _buildPanelFiltrosYResultados()
+                    : _buildTablaAulasNoRevisadas(),
             ),
             if (_cargando)
               Positioned.fill(
@@ -919,6 +725,251 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPanelFiltrosYResultados() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          const SizedBox(height: 125),
+          Row(
+            children: [
+              //Configuracion Turno
+              SizedBox(
+                width: 80,
+                child: _buildFiltro(
+                  value: _turnoSeleccionado,
+                  opciones: _opcionesTurno,
+                  hint: 'Turno',
+                  onChanged: (value) async {
+                    setState(() {
+                      _turnoSeleccionado = value;
+                      _filtro2Seleccionado = null;
+                    });
+
+                    if (_filtro1Seleccionado != null && value != null) {
+                      final horasDelEdificio =
+                      await _filtrarHorasPorEdificio(_filtro1Seleccionado!);
+                      setState(() {
+                        _opcionesFiltro2 = filtrarHorasPorTurno(
+                          value,
+                          horasDelEdificio,
+                        );
+                      });
+                    } else {
+                      setState(() {
+                        _opcionesFiltro2 = [];
+                      });
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              //Configuracion Edificio
+              SizedBox(
+                width: 120,
+                child: _buildFiltro(
+                  value: _filtro1Seleccionado,
+                  opciones: _opcionesFiltro1,
+                  hint: 'Edificio',
+                  onChanged: (value) async {
+                    setState(() {
+                      _filtro1Seleccionado = value;
+                      _filtro2Seleccionado = null;
+                    });
+
+                    if (value != null) {
+                      final horasDelEdificio =
+                      await _filtrarHorasPorEdificio(value);
+                      setState(() {
+                        _opcionesFiltro2 = horasDelEdificio;
+                      });
+                    } else {
+                      setState(() {
+                        _opcionesFiltro2 = [];
+                      });
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildFiltro(
+                  value: _filtro2Seleccionado,
+                  opciones: _opcionesFiltro2,
+                  hint: 'Hora',
+                  onChanged: (value) {
+                    setState(() => _filtro2Seleccionado = value);
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.search, color: Colors.white),
+                  onPressed: buscarClases,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 3),
+          if (_mostrarMensajeFiltros)
+            Padding(
+              padding: const EdgeInsets.only(top: 12.0, bottom: 4.0),
+              child: Text(
+                'Por favor seleccione todos los filtros antes de buscar.',
+                style: TextStyle(
+                  color: Colors.red[700],
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          if (_pendientes.isNotEmpty ||
+              _revisados.isNotEmpty ||
+              _noSupervisados.isNotEmpty)
+            Expanded(
+              child: (_pendientes.isNotEmpty ||
+                  _revisados.isNotEmpty ||
+                  _noSupervisados.isNotEmpty)
+                  ? Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: CustomScrollView(
+                  slivers: [
+                    if (_pendientes.isNotEmpty) ...[
+                      SliverPersistentHeader(
+                        pinned: false,
+                        delegate: _HeaderDelegate(
+                          child: _buildSeccionTitulo('Pendientes Por Revisar'),
+                          minHeight: 40,
+                          maxHeight: 40,
+                        ),
+                      ),
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                              (ctx, i) => _buildClaseCard(_pendientes[i],
+                              revisado: false, noSupervisado: false),
+                          childCount: _pendientes.length,
+                        ),
+                      ),
+                    ],
+                    if (_revisados.isNotEmpty) ...[
+                      SliverPersistentHeader(
+                        pinned: false,
+                        delegate: _HeaderDelegate(
+                          child: _buildSeccionTitulo('Revisados'),
+                          minHeight: 40,
+                          maxHeight: 40,
+                        ),
+                      ),
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                              (ctx, i) => _buildClaseCard(_revisados[i],
+                              revisado: true, noSupervisado: false),
+                          childCount: _revisados.length,
+                        ),
+                      ),
+                    ],
+                    if (_noSupervisados.isNotEmpty) ...[
+                      SliverPersistentHeader(
+                        pinned: false,
+                        delegate: _HeaderDelegate(
+                          child: _buildSeccionTitulo('No Supervisados'),
+                          minHeight: 40,
+                          maxHeight: 40,
+                        ),
+                      ),
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                              (ctx, i) => _buildClaseCard(_noSupervisados[i],
+                              revisado: false, noSupervisado: true),
+                          childCount: _noSupervisados.length,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              )
+                  : Center(
+                child: Text(
+                  'No hay clases disponibles',
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTablaAulasNoRevisadas() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 80),
+          Text(
+            'Aulas Aun No Revisadas',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF193863),
+              letterSpacing: 1.1,
+            ),
+          ),
+          const SizedBox(height: 32),
+          // Tabla vacía (puedes personalizarla después)
+          DataTable(
+            columns: const [
+              DataColumn(label: Text('Aula')),
+              DataColumn(label: Text('Estado')),
+            ],
+            rows: const [], // Sin datos por ahora
+          ),
+          const Spacer(),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _mostrarPanelFiltros = true;
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF193863),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Continuar Revisión',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
       ),
     );
   }

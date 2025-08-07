@@ -16,6 +16,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   Map<String, String> _asistenciasRegistradas = {};
   String? _edificioSeleccionado;
+  bool _cargandoEdificio = false;
   bool _mostrarTablaEdificio = false;
   bool _mostrarMensajeFiltros = false;
   bool _busquedaRealizada = false;
@@ -748,10 +749,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPanelFiltrosYResultados() {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(10),
       child: Column(
         children: [
-          const SizedBox(height: 50), // Ajusta el espacio para el botón
+          const SizedBox(height: 60), // Ajusta el espacio para el botón
           Align(
             alignment: Alignment.centerLeft,
             child: ElevatedButton.icon(
@@ -982,19 +983,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildEdificioIcono(String nombre, bool seleccionado) {
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          if (_edificioSeleccionado == nombre && _mostrarTablaEdificio) {
+      onTap: () async {
+        if (_edificioSeleccionado == nombre && _mostrarTablaEdificio) {
+          setState(() {
             _mostrarTablaEdificio = false;
             _edificioSeleccionado = null;
-          } else {
+          });
+        } else {
+          setState(() {
+            _cargandoEdificio = true; // Mostrar indicador de carga
             _edificioSeleccionado = nombre;
             _mostrarTablaEdificio = true;
-          }
-        });
+          });
+
+          // Simula carga o realiza la carga real aquí
+          await Future.delayed(const Duration(milliseconds: 500));
+
+          setState(() {
+            _cargandoEdificio = false; // Ocultar indicador de carga
+          });
+        }
       },
       child: Opacity(
-        opacity: seleccionado ? 1.0 : 0.4, // Opaco si seleccionado, opaco reducido si no
+        opacity: seleccionado ? 1.0 : 0.4,
         child: Column(
           children: [
             Icon(Icons.location_city, size: 40, color: Color(0xFF193863)),
@@ -1046,7 +1057,7 @@ class _HomeScreenState extends State<HomeScreen> {
         border: Border.all(color: Color(0xFF193863)),
       ),
       constraints: BoxConstraints(
-      maxHeight: 450, // altura fija para scroll
+      maxHeight: 350, // altura fija para scroll
       ),
       //margin: const EdgeInsets.only(top: 20),
       child: SingleChildScrollView(
@@ -1064,7 +1075,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             DataColumn(
               label: Text(
-                'Status',
+                'Estatus',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -1093,7 +1104,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           const SizedBox(height: 125),
           Text(
-            'Aulas Aun No Revisadas',
+            'Estatus De Revisión',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w800,
@@ -1117,7 +1128,17 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
           // Mostrar tabla del edificio seleccionado
-          if (_mostrarTablaEdificio) _buildTablaEdificio(),
+          if (_mostrarTablaEdificio)
+            _cargandoEdificio
+                ? Padding(
+              padding: const EdgeInsets.all(20),
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF193863),
+                ),
+              ),
+            )
+                : _buildTablaEdificio(),
 
           const Spacer(),
 

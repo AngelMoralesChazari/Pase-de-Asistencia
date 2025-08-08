@@ -14,6 +14,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  List<Map<String, String>> _salonesEstado = [];
   Map<String, String> _asistenciasRegistradas = {};
   String? _edificioSeleccionado;
   bool _cargandoEdificio = false;
@@ -54,6 +55,11 @@ class _HomeScreenState extends State<HomeScreen> {
         .replaceAll('Í', 'I')
         .replaceAll('Ó', 'O')
         .replaceAll('Ú', 'U');
+  }
+
+  String _capitalize(String s){
+    if (s.isEmpty) return s;
+    return s[0].toUpperCase() + s.substring(1);
   }
 
   List<String> filtrarHorasPorTurno(String turno, List<String> todasLasHoras) {
@@ -269,6 +275,97 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return [];
+  }
+
+  Future<List<Map<String, String>>> _obtenerSalonesYEstadoPorEdificio(String edificio) async {
+    final app = Firebase.app();
+    final database = FirebaseDatabase.instanceFor(
+      app: app,
+      databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+    );
+
+    final ref = database.ref();
+
+    final now = DateTime.now();
+    final fechaActual = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+    final asistenciasSnapshot = await ref.child('asistencias').child(fechaActual).get();
+
+    if (!asistenciasSnapshot.exists) {
+      return [];
+    }
+
+    final asistenciasData = asistenciasSnapshot.value;
+    List<Map<String, String>> salonesEstado = [];
+
+    if (asistenciasData is Map) {
+      asistenciasData.forEach((clave, valor) {
+        if (valor is Map) {
+          final aula = valor['aula']?.toString() ?? '';
+          if (aula.isNotEmpty && aula.startsWith(edificio.split(' ').last)) {
+            final estado = valor['estado']?.toString() ?? 'Pendiente';
+            salonesEstado.add({'aula': aula, 'status': estado});
+          }
+        }
+      });
+    }
+
+    return salonesEstado;
+  }
+
+  Future<List<String>> _obtenerAulasPorEdificio(String edificio) async {
+    final app = Firebase.app();
+    final database = FirebaseDatabase.instanceFor(
+      app: app,
+      databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+    );
+
+    final ref = database.ref();
+
+    final snapshot = await ref.get();
+
+    if (!snapshot.exists) return [];
+
+    final data = snapshot.value;
+    List<dynamic> clasesList = [];
+    if (data is List) {
+      clasesList = data.where((e) => e != null).toList();
+    } else if (data is Map) {
+      clasesList = data.values.where((e) => e != null).toList();
+    }
+
+    final Set<String> aulas = {};
+
+    for (var clase in clasesList) {
+      if (clase is Map) {
+        final aula = clase['A']?.toString() ?? '';
+        if (aula.isNotEmpty && aula.startsWith(edificio.split(' ').last)) {
+          aulas.add(aula);
+        }
+      }
+    }
+
+    return aulas.toList()..sort();
+  }
+
+  Future<List<Map<String, String>>> _obtenerListadoCompletoAulasConEstado(String edificio) async {
+    final aulas = await _obtenerAulasPorEdificio(edificio);
+    final salonesEstado = await _obtenerSalonesYEstadoPorEdificio(edificio);
+
+    // Convertir la lista de estatus a un mapa para acceso rápido
+    final Map<String, String> mapaEstado = {
+      for (var item in salonesEstado) item['aula'] ?? '': item['status'] ?? 'Pendiente'
+    };
+
+    // Construir la lista completa con estatus
+    List<Map<String, String>> listadoCompleto = aulas.map((aula) {
+      return {
+        'aula': aula,
+        'status': mapaEstado[aula] ?? 'Pendiente', // Si no hay estatus, poner 'Pendiente'
+      };
+    }).toList();
+
+    return listadoCompleto;
   }
 
   // ======= INICIO BLOQUE 2 =======
@@ -761,19 +858,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   _mostrarPanelFiltros = false;
                 });
               },
-              icon: Icon(
-                  Icons.arrow_back,
-                color: Colors.white,
-              ),
-              label: Text(
-                  'Regresar',
-                style: TextStyle(
-                  color: Colors.white,
-                ),
-              ),
+              icon: Icon(Icons.arrow_back, color: Colors.white),
+              label: Text('Regresar', style: TextStyle(color: Colors.white)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFF193863),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -889,92 +981,92 @@ class _HomeScreenState extends State<HomeScreen> {
               _noSupervisados.isNotEmpty)
             Expanded(
               child:
-              (_pendientes.isNotEmpty ||
-                  _revisados.isNotEmpty ||
-                  _noSupervisados.isNotEmpty)
+                  (_pendientes.isNotEmpty ||
+                      _revisados.isNotEmpty ||
+                      _noSupervisados.isNotEmpty)
                   ? Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: CustomScrollView(
-                  slivers: [
-                    if (_pendientes.isNotEmpty) ...[
-                      SliverPersistentHeader(
-                        pinned: false,
-                        delegate: _HeaderDelegate(
-                          child: _buildSeccionTitulo(
-                            'Pendientes Por Revisar',
-                          ),
-                          minHeight: 40,
-                          maxHeight: 40,
-                        ),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                              (ctx, i) => _buildClaseCard(
-                            _pendientes[i],
-                            revisado: false,
-                            noSupervisado: false,
-                          ),
-                          childCount: _pendientes.length,
-                        ),
+                      child: CustomScrollView(
+                        slivers: [
+                          if (_pendientes.isNotEmpty) ...[
+                            SliverPersistentHeader(
+                              pinned: false,
+                              delegate: _HeaderDelegate(
+                                child: _buildSeccionTitulo(
+                                  'Pendientes Por Revisar',
+                                ),
+                                minHeight: 40,
+                                maxHeight: 40,
+                              ),
+                            ),
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (ctx, i) => _buildClaseCard(
+                                  _pendientes[i],
+                                  revisado: false,
+                                  noSupervisado: false,
+                                ),
+                                childCount: _pendientes.length,
+                              ),
+                            ),
+                          ],
+                          if (_revisados.isNotEmpty) ...[
+                            SliverPersistentHeader(
+                              pinned: false,
+                              delegate: _HeaderDelegate(
+                                child: _buildSeccionTitulo('Revisados'),
+                                minHeight: 40,
+                                maxHeight: 40,
+                              ),
+                            ),
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (ctx, i) => _buildClaseCard(
+                                  _revisados[i],
+                                  revisado: true,
+                                  noSupervisado: false,
+                                ),
+                                childCount: _revisados.length,
+                              ),
+                            ),
+                          ],
+                          if (_noSupervisados.isNotEmpty) ...[
+                            SliverPersistentHeader(
+                              pinned: false,
+                              delegate: _HeaderDelegate(
+                                child: _buildSeccionTitulo('No Supervisados'),
+                                minHeight: 40,
+                                maxHeight: 40,
+                              ),
+                            ),
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (ctx, i) => _buildClaseCard(
+                                  _noSupervisados[i],
+                                  revisado: false,
+                                  noSupervisado: true,
+                                ),
+                                childCount: _noSupervisados.length,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                    ],
-                    if (_revisados.isNotEmpty) ...[
-                      SliverPersistentHeader(
-                        pinned: false,
-                        delegate: _HeaderDelegate(
-                          child: _buildSeccionTitulo('Revisados'),
-                          minHeight: 40,
-                          maxHeight: 40,
-                        ),
-                      ),
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                              (ctx, i) => _buildClaseCard(
-                            _revisados[i],
-                            revisado: true,
-                            noSupervisado: false,
-                          ),
-                          childCount: _revisados.length,
-                        ),
-                      ),
-                    ],
-                    if (_noSupervisados.isNotEmpty) ...[
-                      SliverPersistentHeader(
-                        pinned: false,
-                        delegate: _HeaderDelegate(
-                          child: _buildSeccionTitulo('No Supervisados'),
-                          minHeight: 40,
-                          maxHeight: 40,
-                        ),
-                      ),
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                              (ctx, i) => _buildClaseCard(
-                            _noSupervisados[i],
-                            revisado: false,
-                            noSupervisado: true,
-                          ),
-                          childCount: _noSupervisados.length,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              )
+                    )
                   : Center(
-                child: Text(
-                  'No hay clases disponibles',
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+                      child: Text(
+                        'No hay clases disponibles',
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
             ),
         ],
       ),
@@ -988,19 +1080,21 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _mostrarTablaEdificio = false;
             _edificioSeleccionado = null;
+            _salonesEstado = [];
           });
         } else {
           setState(() {
-            _cargandoEdificio = true; // Mostrar indicador de carga
+            _cargandoEdificio = true;
             _edificioSeleccionado = nombre;
             _mostrarTablaEdificio = true;
+            _salonesEstado = [];
           });
 
-          // Simula carga o realiza la carga real aquí
-          await Future.delayed(const Duration(milliseconds: 500));
+          final datos = await _obtenerListadoCompletoAulasConEstado(nombre);
 
           setState(() {
-            _cargandoEdificio = false; // Ocultar indicador de carga
+            _salonesEstado = datos;
+            _cargandoEdificio = false;
           });
         }
       },
@@ -1025,27 +1119,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTablaEdificio() {
-    // Ejemplo de filas, reemplaza con datos reales según el edificio seleccionado
-    final filasEjemplo = [
-      {'aula': '101', 'status': 'Pendiente'},
-      {'aula': '102', 'status': 'Revisado'},
-      {'aula': '103', 'status': 'Pendiente'},
-      {'aula': '101', 'status': 'Pendiente'},
-      {'aula': '102', 'status': 'Revisado'},
-      {'aula': '103', 'status': 'Pendiente'},
-      {'aula': '101', 'status': 'Pendiente'},
-      {'aula': '102', 'status': 'Revisado'},
-      {'aula': '103', 'status': 'Pendiente'},
-      {'aula': '101', 'status': 'Pendiente'},
-      {'aula': '102', 'status': 'Revisado'},
-      {'aula': '103', 'status': 'Pendiente'},
-      {'aula': '101', 'status': 'Pendiente'},
-      {'aula': '102', 'status': 'Revisado'},
-      {'aula': '103', 'status': 'Pendiente'},
-      {'aula': '101', 'status': 'Pendiente'},
-      {'aula': '102', 'status': 'Revisado'},
-      {'aula': '103', 'status': 'Pendiente'},
-    ];
+
+    if (_salonesEstado.isEmpty) {
+      return Center(
+        child: Text(
+          'No hay datos disponibles para este edificio',
+          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+        ),
+      );
+    }
 
     return Container(
       width: double.infinity,
@@ -1056,7 +1138,6 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Color(0xFF193863)),
       ),
-
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1095,11 +1176,14 @@ class _HomeScreenState extends State<HomeScreen> {
           // Lista scrollable de filas
           Expanded(
             child: ListView.builder(
-              itemCount: filasEjemplo.length,
+              itemCount: _salonesEstado.length,
               itemBuilder: (context, index) {
-                final fila = filasEjemplo[index];
+                final fila = _salonesEstado[index];
                 return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 16,
+                  ),
                   decoration: BoxDecoration(
                     border: Border(
                       bottom: BorderSide(color: Colors.grey.shade300),
@@ -1110,14 +1194,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         flex: 1,
                         child: Text(
-                          fila['aula']!,
+                          fila['aula'] ?? '',
                           style: const TextStyle(fontSize: 16),
                         ),
                       ),
                       Expanded(
                         flex: 1,
                         child: Text(
-                          fila['status']!,
+                          _capitalize(fila['status'] ?? ''),
                           style: const TextStyle(fontSize: 16),
                         ),
                       ),
@@ -1151,11 +1235,26 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildEdificioIcono('Edificio 1', _edificioSeleccionado == 'Edificio 1'),
-              _buildEdificioIcono('Edificio 2', _edificioSeleccionado == 'Edificio 2'),
-              _buildEdificioIcono('Edificio 3', _edificioSeleccionado == 'Edificio 3'),
-              _buildEdificioIcono('Edificio 4', _edificioSeleccionado == 'Edificio 4'),
-              _buildEdificioIcono('Edificio 5', _edificioSeleccionado == 'Edificio 5'),
+              _buildEdificioIcono(
+                'Edificio 1',
+                _edificioSeleccionado == 'Edificio 1',
+              ),
+              _buildEdificioIcono(
+                'Edificio 2',
+                _edificioSeleccionado == 'Edificio 2',
+              ),
+              _buildEdificioIcono(
+                'Edificio 3',
+                _edificioSeleccionado == 'Edificio 3',
+              ),
+              _buildEdificioIcono(
+                'Edificio 4',
+                _edificioSeleccionado == 'Edificio 4',
+              ),
+              _buildEdificioIcono(
+                'Edificio 5',
+                _edificioSeleccionado == 'Edificio 5',
+              ),
             ],
           ),
 
@@ -1164,17 +1263,17 @@ class _HomeScreenState extends State<HomeScreen> {
           if (_mostrarTablaEdificio)
             _cargandoEdificio
                 ? Padding(
-              padding: const EdgeInsets.all(20),
-              child: Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFF193863),
-                ),
-              ),
-            )
+                    padding: const EdgeInsets.all(20),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF193863),
+                      ),
+                    ),
+                  )
                 : SizedBox(
-              height: MediaQuery.of(context).size.height * 0.45,
-              child: _buildTablaEdificio(),
-            ),
+                    height: MediaQuery.of(context).size.height * 0.45,
+                    child: _buildTablaEdificio(),
+                  ),
 
           if (!_cargandoEdificio) SizedBox(height: 10),
 
@@ -1418,8 +1517,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-
 
   // ======= FIN BLOQUE 4 =======
 }

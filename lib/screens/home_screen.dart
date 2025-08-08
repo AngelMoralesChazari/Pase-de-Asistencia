@@ -1049,23 +1049,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      padding: const EdgeInsets.all(8),
+      margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Color(0xFF193863)),
       ),
-      constraints: BoxConstraints(
-      maxHeight: 350, // altura fija para scroll
-      ),
-      //margin: const EdgeInsets.only(top: 20),
+
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Fila fija de títulos
           Container(
-            color: Colors.white,
+            color: Colors.grey[200],
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             child: Row(
               children: const [
@@ -1150,10 +1147,7 @@ class _HomeScreenState extends State<HomeScreen> {
               letterSpacing: 1.1,
             ),
           ),
-
-          const SizedBox(height: 20),
-
-          // Fila de edificios
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -1165,7 +1159,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
 
-          // Mostrar tabla del edificio seleccionado
+          const SizedBox(height: 10),
+
           if (_mostrarTablaEdificio)
             _cargandoEdificio
                 ? Padding(
@@ -1176,36 +1171,40 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             )
-                : _buildTablaEdificio(),
+                : SizedBox(
+              height: MediaQuery.of(context).size.height * 0.45,
+              child: _buildTablaEdificio(),
+            ),
 
-          const Spacer(),
+          if (!_cargandoEdificio) SizedBox(height: 10),
 
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _mostrarPanelFiltros = true;
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF193863),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+          if (!_cargandoEdificio)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _mostrarPanelFiltros = true;
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF193863),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-              ),
-              child: const Text(
-                'Continuar Revisión',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.1,
-                  color: Colors.white,
+                child: const Text(
+                  'Continuar Revisión',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.1,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
-          ),
           const SizedBox(height: 24),
         ],
       ),

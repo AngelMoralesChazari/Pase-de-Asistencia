@@ -1060,39 +1060,77 @@ class _HomeScreenState extends State<HomeScreen> {
       maxHeight: 350, // altura fija para scroll
       ),
       //margin: const EdgeInsets.only(top: 20),
-      child: SingleChildScrollView(
-        child: DataTable(
-          columns: const [
-            DataColumn(
-              label: Text(
-                'Aula',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF193863),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Fila fija de títulos
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            child: Row(
+              children: const [
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'Aula',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF193863),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                'Estatus',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF193863),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    'Estatus',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF193863),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
-          rows: filasEjemplo.map((fila) {
-            return DataRow(
-              cells: [
-                DataCell(Text(fila['aula']!)),
-                DataCell(Text(fila['status']!)),
               ],
-            );
-          }).toList(),
-        ),
+            ),
+          ),
+          const Divider(height: 1, thickness: 1),
+          // Lista scrollable de filas
+          Expanded(
+            child: ListView.builder(
+              itemCount: filasEjemplo.length,
+              itemBuilder: (context, index) {
+                final fila = filasEjemplo[index];
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.shade300),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 1,
+                        child: Text(
+                          fila['aula']!,
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Text(
+                          fila['status']!,
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

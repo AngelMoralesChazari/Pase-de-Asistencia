@@ -42,6 +42,26 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<dynamic, dynamic>> _revisados = [];
   List<Map<dynamic, dynamic>> _noSupervisados = [];
 
+  Color _colorPorcentajeRevisados(List<Map<String, String>> salonesEstado) {
+    if (salonesEstado.isEmpty) return Colors.red;
+
+    int total = salonesEstado.length;
+    int revisados = salonesEstado.where((salon) {
+      final status = salon['status']?.toLowerCase() ?? '';
+      return status == 'asistio' || status == 'falto';
+    }).length;
+
+    double porcentaje = (revisados / total) * 100;
+
+    if (porcentaje == 100) {
+      return Colors.green;
+    } else if (porcentaje > 50) {
+      return Colors.orange;
+    } else {
+      return Colors.red;
+    }
+  }
+
   // Función para normalizar texto
   String quitarTildes(String str) {
     return str
@@ -1093,6 +1113,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildEdificioIcono(String nombre, bool seleccionado) {
+    // Obtener el color según el porcentaje de salones revisados para este edificio
+    List<Map<String, String>> salonesDelEdificio = [];
+    if (_edificioSeleccionado == nombre && _salonesEstado.isNotEmpty) {
+      salonesDelEdificio = _salonesEstado;
+    }
+
+    Color colorIcono = _colorPorcentajeRevisados(salonesDelEdificio);
+
     return GestureDetector(
       onTap: () async {
         if (_edificioSeleccionado == nombre && _mostrarTablaEdificio) {
@@ -1121,14 +1149,14 @@ class _HomeScreenState extends State<HomeScreen> {
         opacity: seleccionado ? 1.0 : 0.4,
         child: Column(
           children: [
-            Icon(Icons.location_city, size: 40, color: Color(0xFF193863)),
+            Icon(Icons.location_city, size: 40, color: colorIcono),
             const SizedBox(height: 5),
             Text(
               nombre,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF193863),
+                color: colorIcono,
               ),
             ),
           ],

@@ -144,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final database = FirebaseDatabase.instanceFor(
       app: app,
       databaseURL:
-          'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+      'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
     );
 
     final ref = database.ref();
@@ -188,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       final edificiosFinales =
-          edificiosNumericos.map((e) => "Edificio $e").toList()..sort();
+      edificiosNumericos.map((e) => "Edificio $e").toList()..sort();
 
       final horasFinales = horas.toList()
         ..sort((a, b) {
@@ -208,13 +208,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<List<String>> _filtrarHorasPorEdificio(
-    String edificioSeleccionado,
-  ) async {
+      String edificioSeleccionado,
+      ) async {
     final app = Firebase.app();
     final database = FirebaseDatabase.instanceFor(
       app: app,
       databaseURL:
-          'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+      'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
     );
 
     final ref = database.ref();
@@ -406,7 +406,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final database = FirebaseDatabase.instanceFor(
       app: app,
       databaseURL:
-          'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+      'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
     );
 
     final ref = database.ref();
@@ -704,9 +704,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // --- Funciones de asistencias ---
 
   Future<void> _registrarAsistencia(
-    Map<dynamic, dynamic> clase,
-    String estadoAsistencia,
-  ) async {
+      Map<dynamic, dynamic> clase,
+      String estadoAsistencia,
+      ) async {
     setState(() {
       _cargando = true;
     });
@@ -716,7 +716,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final database = FirebaseDatabase.instanceFor(
         app: app,
         databaseURL:
-            'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+        'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
       );
 
       final ref = database.ref();
@@ -980,93 +980,31 @@ class _HomeScreenState extends State<HomeScreen> {
               _revisados.isNotEmpty ||
               _noSupervisados.isNotEmpty)
             Expanded(
-              child:
-                  (_pendientes.isNotEmpty ||
-                      _revisados.isNotEmpty ||
-                      _noSupervisados.isNotEmpty)
-                  ? Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.95),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: CustomScrollView(
-                        slivers: [
-                          if (_pendientes.isNotEmpty) ...[
-                            SliverPersistentHeader(
-                              pinned: false,
-                              delegate: _HeaderDelegate(
-                                child: _buildSeccionTitulo(
-                                  'Pendientes Por Revisar',
-                                ),
-                                minHeight: 40,
-                                maxHeight: 40,
-                              ),
-                            ),
-                            SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (ctx, i) => _buildClaseCard(
-                                  _pendientes[i],
-                                  revisado: false,
-                                  noSupervisado: false,
-                                ),
-                                childCount: _pendientes.length,
-                              ),
-                            ),
-                          ],
-                          if (_revisados.isNotEmpty) ...[
-                            SliverPersistentHeader(
-                              pinned: false,
-                              delegate: _HeaderDelegate(
-                                child: _buildSeccionTitulo('Revisados'),
-                                minHeight: 40,
-                                maxHeight: 40,
-                              ),
-                            ),
-                            SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (ctx, i) => _buildClaseCard(
-                                  _revisados[i],
-                                  revisado: true,
-                                  noSupervisado: false,
-                                ),
-                                childCount: _revisados.length,
-                              ),
-                            ),
-                          ],
-                          if (_noSupervisados.isNotEmpty) ...[
-                            SliverPersistentHeader(
-                              pinned: false,
-                              delegate: _HeaderDelegate(
-                                child: _buildSeccionTitulo('No Supervisados'),
-                                minHeight: 40,
-                                maxHeight: 40,
-                              ),
-                            ),
-                            SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (ctx, i) => _buildClaseCard(
-                                  _noSupervisados[i],
-                                  revisado: false,
-                                  noSupervisado: true,
-                                ),
-                                childCount: _noSupervisados.length,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    )
-                  : Center(
-                      child: Text(
-                        'No hay clases disponibles',
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: CustomScrollView(
+                  slivers: [
+                    // ... tu código actual para mostrar las listas ...
+                  ],
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: Center(
+                child: Text(
+                  'No hay clases disponibles',
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ),
         ],
       ),
@@ -1263,17 +1201,17 @@ class _HomeScreenState extends State<HomeScreen> {
           if (_mostrarTablaEdificio)
             _cargandoEdificio
                 ? Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF193863),
-                      ),
-                    ),
-                  )
+              padding: const EdgeInsets.all(20),
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF193863),
+                ),
+              ),
+            )
                 : SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.45,
-                    child: _buildTablaEdificio(),
-                  ),
+              height: MediaQuery.of(context).size.height * 0.45,
+              child: _buildTablaEdificio(),
+            ),
 
           if (!_cargandoEdificio) SizedBox(height: 10),
 
@@ -1356,10 +1294,10 @@ class _HomeScreenState extends State<HomeScreen> {
   );
 
   Widget _buildClaseCard(
-    Map<dynamic, dynamic> clase, {
-    bool revisado = false,
-    bool noSupervisado = false,
-  }) {
+      Map<dynamic, dynamic> clase, {
+        bool revisado = false,
+        bool noSupervisado = false,
+      }) {
     final horarioParaClave = clase["horario"]
         .toString()
         .replaceAll(' ', '-')
@@ -1446,69 +1384,69 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   )
                 else if (fueraDeVentana)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text(
-                      'Fuera De Tiempo Para Registrar Asistencia',
-                      style: TextStyle(
-                        color: Colors.orange[800],
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(
+                        'Fuera De Tiempo Para Registrar Asistencia',
+                        style: TextStyle(
+                          color: Colors.orange[800],
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
+                    )
+                  else
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 16,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () => _registrarAsistencia(clase, "asistio"),
+                          icon: const Icon(Icons.check_circle, size: 20),
+                          label: const Text(
+                            'Asistió',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () => _registrarAsistencia(clase, "falto"),
+                          icon: const Icon(Icons.cancel, size: 20),
+                          label: const Text(
+                            'Faltó',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  )
-                else
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 16,
-                    runSpacing: 8,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () => _registrarAsistencia(clase, "asistio"),
-                        icon: const Icon(Icons.check_circle, size: 20),
-                        label: const Text(
-                          'Asistió',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: () => _registrarAsistencia(clase, "falto"),
-                        icon: const Icon(Icons.cancel, size: 20),
-                        label: const Text(
-                          'Faltó',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 const SizedBox(height: 10),
               ],
             ),
@@ -1518,7 +1456,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ======= FIN BLOQUE 4 =======
+// ======= FIN BLOQUE 4 =======
 }
 
 class _HeaderDelegate extends SliverPersistentHeaderDelegate {
@@ -1534,10 +1472,10 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+      BuildContext context,
+      double shrinkOffset,
+      bool overlapsContent,
+      ) {
     return child;
   }
 

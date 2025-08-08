@@ -544,7 +544,12 @@ class _HomeScreenState extends State<HomeScreen> {
       _busquedaKey++;
       _expansionTileKey++;
     });
+    print('Pendientes: ${pendientes.length}');
+    print('Revisados: ${revisados.length}');
+    print('No Supervisados: ${noSupervisados.length}');
   }
+
+
 
   // Función para agrupar clases consecutivas
   List<Map<dynamic, dynamic>> _agruparClasesConsecutivas(List<dynamic> clases) {
@@ -988,7 +993,83 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: CustomScrollView(
                   slivers: [
-                    // ... tu código actual para mostrar las listas ...
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _HeaderDelegate(
+                        minHeight: 40,
+                        maxHeight: 40,
+                        child: Container(
+                          color: Colors.white,
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Clases Pendientes',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                          final clase = _pendientes[index];
+                          return _buildClaseCard(clase);
+                        },
+                        childCount: _pendientes.length,
+                      ),
+                    ),
+
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _HeaderDelegate(
+                        minHeight: 40,
+                        maxHeight: 40,
+                        child: Container(
+                          color: Colors.white,
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Clases Revisadas',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                          final clase = _revisados[index];
+                          return _buildClaseCard(clase, revisado: true);
+                        },
+                        childCount: _revisados.length,
+                      ),
+                    ),
+
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _HeaderDelegate(
+                        minHeight: 40,
+                        maxHeight: 40,
+                        child: Container(
+                          color: Colors.white,
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Clases No Supervisadas',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                          final clase = _noSupervisados[index];
+                          return _buildClaseCard(clase, noSupervisado: true);
+                        },
+                        childCount: _noSupervisados.length,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1123,6 +1204,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     horizontal: 16,
                   ),
                   decoration: BoxDecoration(
+                    color: (fila['status']?.toLowerCase() == 'asistio')
+                        ? Colors.green.withOpacity(0.3)
+                        : (fila['status']?.toLowerCase() == 'falto')
+                        ? Colors.red.withOpacity(0.3)
+                        : Colors.transparent,
                     border: Border(
                       bottom: BorderSide(color: Colors.grey.shade300),
                     ),

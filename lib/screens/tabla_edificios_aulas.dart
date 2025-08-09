@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class TablaEdificiosAulas extends StatelessWidget {
   final Map<String, List<String>> edificiosAulas;
 
-  const TablaEdificiosAulas({Key? key, required this.edificiosAulas}) : super(key: key);
+  const TablaEdificiosAulas({super.key, required this.edificiosAulas});
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +43,7 @@ class TablaEdificiosAulas extends StatelessWidget {
                 style: const TextStyle(fontSize: 16),
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

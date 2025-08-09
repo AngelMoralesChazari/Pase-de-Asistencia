@@ -1,6 +1,5 @@
 //Pantalla de Inicio (Busqueda)
 
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -15,8 +14,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, String>> _salonesEstado = [];
-  Map<String, String> _asistenciasRegistradas = {};
+  final Map<String, String> _asistenciasRegistradas = {};
   String? _edificioSeleccionado;
+  bool _cargandoFiltros = true;
   bool _cargandoEdificio = false;
   bool _mostrarTablaEdificio = false;
   bool _mostrarMensajeFiltros = false;
@@ -41,6 +41,9 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<dynamic, dynamic>> _pendientes = [];
   List<Map<dynamic, dynamic>> _revisados = [];
   List<Map<dynamic, dynamic>> _noSupervisados = [];
+
+  // Caché para almacenar listado de aulas con estado por edificio
+  final Map<String, List<Map<String, String>>> _cacheSalonesPorEdificio = {};
 
   Color _colorPorcentajeRevisados(List<Map<String, String>> salonesEstado) {
     if (salonesEstado.isEmpty) return Colors.red;
@@ -186,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (clase is Map) {
           if (clase['A'] != null && clase['A'].toString().isNotEmpty) {
             String aula = clase['A'].toString();
-            if (aula.length >= 1) {
+            if (aula.isNotEmpty) {
               String prefijo = aula.substring(0, 1);
               edificiosNumericos.add(prefijo);
             }
@@ -223,6 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _opcionesFiltro1 = edificiosFinales;
         _opcionesFiltro2 = horasFinales;
         _todasLasHoras = horasFinales;
+        _cargandoFiltros = false;
       });
     }
   }
@@ -369,21 +373,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<List<Map<String, String>>> _obtenerListadoCompletoAulasConEstado(String edificio) async {
+    // Revisar caché primero
+    if (_cacheSalonesPorEdificio.containsKey(edificio)) {
+      return _cacheSalonesPorEdificio[edificio]!;
+    }
+
     final aulas = await _obtenerAulasPorEdificio(edificio);
     final salonesEstado = await _obtenerSalonesYEstadoPorEdificio(edificio);
 
-    // Convertir la lista de estatus a un mapa para acceso rápido
     final Map<String, String> mapaEstado = {
       for (var item in salonesEstado) item['aula'] ?? '': item['status'] ?? 'Pendiente'
     };
 
-    // Construir la lista completa con estatus
     List<Map<String, String>> listadoCompleto = aulas.map((aula) {
       return {
         'aula': aula,
-        'status': mapaEstado[aula] ?? 'Pendiente', // Si no hay estatus, poner 'Pendiente'
+        'status': mapaEstado[aula] ?? 'Pendiente',
       };
     }).toList();
+
+    // Guardar en caché
+    _cacheSalonesPorEdificio[edificio] = listadoCompleto;
 
     return listadoCompleto;
   }
@@ -417,7 +427,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    // Si llegamos aquí, todos los filtros están seleccionados, ocultar el mensaje
     setState(() {
       _mostrarMensajeFiltros = false;
     });
@@ -425,8 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final app = Firebase.app();
     final database = FirebaseDatabase.instanceFor(
       app: app,
-      databaseURL:
-      'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+      databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
     );
 
     final ref = database.ref();
@@ -450,9 +458,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final aula = clase['A']?.toString() ?? '';
       final hora = clase['B']?.toString() ?? '';
-      final edificio = aula.isNotEmpty
-          ? "Edificio ${aula.substring(0, 1)}"
-          : '';
+      final edificio = aula.isNotEmpty ? "Edificio ${aula.substring(0, 1)}" : '';
 
       if (edificio != _filtro1Seleccionado) return false;
 
@@ -481,12 +487,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final clasesAgrupadas = _agruparClasesConsecutivas(clasesFiltradas);
 
     final clasesAgrupadasFiltradas = clasesAgrupadas.where((clase) {
-      // Verificar que materia y profe no estén vacíos
       final materia = (clase['materia'] ?? '').toString().trim();
       final profe = (clase['profe'] ?? '').toString().trim();
       final grupo = (clase['grupo'] ?? '').toString().trim();
 
-      // Filtrar si están vacíos o contienen "VACIO" o "sin asignar"
       if (materia.isEmpty ||
           materia.toUpperCase().contains('VACIO') ||
           materia.toLowerCase().contains('sin asignar')) {
@@ -506,7 +510,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return true;
     }).toList();
 
-    // --- Clasificación de la Asistencia ---
     List<Map<dynamic, dynamic>> pendientes = [];
     List<Map<dynamic, dynamic>> revisados = [];
     List<Map<dynamic, dynamic>> noSupervisados = [];
@@ -541,7 +544,6 @@ class _HomeScreenState extends State<HomeScreen> {
           pendientes.add(clase);
         }
       } else {
-        // Si no se puede parsear la hora, lo dejamos en pendientes por defecto
         pendientes.add(clase);
       }
     }
@@ -564,12 +566,13 @@ class _HomeScreenState extends State<HomeScreen> {
       _busquedaKey++;
       _expansionTileKey++;
     });
+
+    /*
     print('Pendientes: ${pendientes.length}');
     print('Revisados: ${revisados.length}');
     print('No Supervisados: ${noSupervisados.length}');
+    */
   }
-
-
 
   // Función para agrupar clases consecutivas
   List<Map<dynamic, dynamic>> _agruparClasesConsecutivas(List<dynamic> clases) {
@@ -774,13 +777,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
       await asistenciaRef.set(datosAsistencia);
 
-      // Actualiza el mapa local
+      // Limpiar caché del edificio correspondiente para forzar recarga
+      final edificio = "Edificio ${clase["aula"].toString().substring(0, 1)}";
+      _cacheSalonesPorEdificio.remove(edificio);
+
+      //Recarga los datos actualizados para el edificio
+      final datosActualizados = await
+      _obtenerListadoCompletoAulasConEstado(edificio);
+      _cacheSalonesPorEdificio[edificio] = datosActualizados;
+
+      // Actualiza el estado para refrescar la UI
       setState(() {
         _asistenciasRegistradas[claveRegistro] = estadoAsistencia;
+        _salonesEstado = datosActualizados;
+        _cargando = false;
       });
-
-      // Vuelve a buscar las clases para refrescar las listas
-      buscarClases();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -789,14 +800,13 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     } catch (e) {
+      setState(() {
+        _cargando = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al registrar asistencia: $e')),
       );
       print('Error al registrar asistencia: $e');
-    } finally {
-      setState(() {
-        _cargando = false;
-      });
     }
   }
 
@@ -850,9 +860,11 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Image.asset('assets/images/inicio.jpg', fit: BoxFit.cover),
             ),
             SafeArea(
-              child: _mostrarPanelFiltros
+              child: _cargandoFiltros
+                  ? Center(child: CircularProgressIndicator(color: Color(0xFF193863)))
+                  : (_mostrarPanelFiltros
                   ? _buildPanelFiltrosYResultados()
-                  : _buildTablaAulasNoRevisadas(),
+                  : _buildTablaAulasNoRevisadas()),
             ),
             if (_cargando)
               Positioned.fill(
@@ -1113,14 +1125,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildEdificioIcono(String nombre, bool seleccionado) {
-    // Obtener el color según el porcentaje de salones revisados para este edificio
-    List<Map<String, String>> salonesDelEdificio = [];
-    if (_edificioSeleccionado == nombre && _salonesEstado.isNotEmpty) {
-      salonesDelEdificio = _salonesEstado;
-    }
-
-    Color colorIcono = _colorPorcentajeRevisados(salonesDelEdificio);
-
     return GestureDetector(
       onTap: () async {
         if (_edificioSeleccionado == nombre && _mostrarTablaEdificio) {
@@ -1137,7 +1141,13 @@ class _HomeScreenState extends State<HomeScreen> {
             _salonesEstado = [];
           });
 
-          final datos = await _obtenerListadoCompletoAulasConEstado(nombre);
+          List<Map<String, String>> datos;
+
+          if (_cacheSalonesPorEdificio.containsKey(nombre)) {
+            datos = _cacheSalonesPorEdificio[nombre]!;
+          } else {
+            datos = await _obtenerListadoCompletoAulasConEstado(nombre);
+          }
 
           setState(() {
             _salonesEstado = datos;
@@ -1145,22 +1155,30 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         }
       },
-      child: Opacity(
-        opacity: seleccionado ? 1.0 : 0.4,
-        child: Column(
-          children: [
-            Icon(Icons.location_city, size: 40, color: colorIcono),
-            const SizedBox(height: 5),
-            Text(
-              nombre,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: colorIcono,
-              ),
+      child: Builder(
+        builder: (context) {
+          List<Map<String, String>> salonesDelEdificio = _cacheSalonesPorEdificio[nombre] ?? [];
+
+          Color colorIcono = _colorPorcentajeRevisados(salonesDelEdificio);
+
+          return Opacity(
+            opacity: seleccionado ? 1.0 : 0.4,
+            child: Column(
+              children: [
+                Icon(Icons.location_city, size: 40, color: colorIcono),
+                const SizedBox(height: 5),
+                Text(
+                  nombre,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: colorIcono,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -1220,8 +1238,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const Divider(height: 1, thickness: 1),
-          // Lista scrollable de filas
-          Expanded(
+          // Lista scrollable de filas con altura fija
+          SizedBox(
+            height: 300, // Ajusta la altura según convenga
             child: ListView.builder(
               itemCount: _salonesEstado.length,
               itemBuilder: (context, index) {

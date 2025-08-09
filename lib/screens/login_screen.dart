@@ -2,10 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:pase_de_asistencia/screens/login_form_screen.dart';
-import 'package:pase_de_asistencia/services/auth_service.dart';
 
 class LoginScreen extends StatelessWidget {
-  LoginScreen({super.key});
+  const LoginScreen({super.key});
 
   void _navigateWithSmoothTransition(BuildContext context) {
     Navigator.push(

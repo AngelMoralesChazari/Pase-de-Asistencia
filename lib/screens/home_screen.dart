@@ -1,9 +1,13 @@
-//Pantalla de Inicio (Busqueda)
+//Pantalla de Inicio (Busqueda) con Geolocalización
 
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'dart:async';
+import 'dart:math';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -45,6 +49,17 @@ class _HomeScreenState extends State<HomeScreen> {
   // Caché para almacenar listado de aulas con estado por edificio
   final Map<String, List<Map<String, String>>> _cacheSalonesPorEdificio = {};
 
+  // Variables para geolocalización
+  Position? _currentPosition;
+  String? _currentAddress;
+  bool _locationPermissionGranted = false;
+
+  // Coordenadas de la escuela
+  static const double ESCUELA_LATITUD = 17.53649076947492;
+  static const double ESCUELA_LONGITUD = -99.49532526308951;
+  static const double RADIO_PERMITIDO = 120.0;
+
+  // Color de los iconos de edificios en el mapa
   Color _colorPorcentajeRevisados(List<Map<String, String>> salonesEstado) {
     if (salonesEstado.isEmpty) return Colors.red;
 
@@ -85,6 +100,223 @@ class _HomeScreenState extends State<HomeScreen> {
     return s[0].toUpperCase() + s.substring(1);
   }
 
+  // ======= FUNCIONES DE GEOLOCALIZACIÓN =======
+
+  Future<void> _initializeLocation() async {
+    await _checkLocationPermission();
+    if (_locationPermissionGranted) {
+      await _getCurrentLocation();
+    }
+  }
+
+  Future<void> _checkLocationPermission() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _showLocationDialog('Los servicios de ubicación están deshabilitados.');
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        _showLocationDialog('Los permisos de ubicación fueron denegados.');
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      _showLocationDialog('Los permisos de ubicación están permanentemente denegados.');
+      return;
+    }
+
+    setState(() {
+      _locationPermissionGranted = true;
+    });
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      setState(() {
+        _currentPosition = position;
+        if (placemarks.isNotEmpty) {
+          Placemark place = placemarks[0];
+          _currentAddress = '${place.street}, ${place.locality}, ${place.administrativeArea}';
+        }
+      });
+    } catch (e) {
+      print('Error obteniendo ubicación: $e');
+      _showLocationDialog('Error al obtener la ubicación: $e');
+    }
+  }
+
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    return Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
+  }
+
+  bool _isWithinSchoolRadius() {
+    if (_currentPosition == null) return false;
+
+    double distance = _calculateDistance(
+      _currentPosition!.latitude,
+      _currentPosition!.longitude,
+      ESCUELA_LATITUD,
+      ESCUELA_LONGITUD,
+    );
+
+    return distance <= RADIO_PERMITIDO;
+  }
+
+  void _showLocationDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Ubicación'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _verifyLocationForAttendance() async {
+    if (!_locationPermissionGranted) {
+      await _checkLocationPermission();
+      if (!_locationPermissionGranted) {
+        _showLocationDialog('Se requieren permisos de ubicación para registrar asistencia.');
+        return false;
+      }
+    }
+
+    await _getCurrentLocation();
+
+    if (_currentPosition == null) {
+      _showLocationDialog('No se pudo obtener la ubicación actual.');
+      return false;
+    }
+
+    if (!_isWithinSchoolRadius()) {
+      double distance = _calculateDistance(
+        _currentPosition!.latitude,
+        _currentPosition!.longitude,
+        ESCUELA_LATITUD,
+        ESCUELA_LONGITUD,
+      );
+
+      _showLocationDialog(
+          'Debe estar dentro de la escuela para registrar asistencia.\n'
+              'Distancia actual: ${distance.toStringAsFixed(0)} metros\n'
+              'Distancia máxima permitida: ${RADIO_PERMITIDO.toStringAsFixed(0)} metros'
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  // ======= FIN FUNCIONES DE GEOLOCALIZACIÓN =======
+
+  Future<bool> _ensureLocationServicesEnabled() async {
+    final enabled = await Geolocator.isLocationServiceEnabled();
+    if (!enabled) {
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Ubicación deshabilitada'),
+          content: const Text('Debes activar el GPS/Ubicación para usar la app.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await Geolocator.openLocationSettings();
+                if (context.mounted) Navigator.of(context).pop();
+              },
+              child: const Text('Abrir Ajustes'),
+            ),
+          ],
+        ),
+      );
+    }
+    // Vuelve a checar después de que cierre el diálogo
+    return await Geolocator.isLocationServiceEnabled();
+  }
+
+  Future<bool> _ensureLocationPermissionGranted() async {
+    var permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Permiso de ubicación requerido'),
+          content: const Text(
+            'Debes otorgar permiso de ubicación en Ajustes para usar la app.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await Geolocator.openAppSettings();
+                if (context.mounted) Navigator.of(context).pop();
+              },
+              child: const Text('Abrir Ajustes'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    permission = await Geolocator.checkPermission();
+    final granted = permission == LocationPermission.whileInUse || permission == LocationPermission.always;
+    if (granted) {
+      setState(() => _locationPermissionGranted = true);
+    }
+    return granted;
+  }
+
+  Future<bool> _ensureLocationRequirement() async {
+    final servicesOk = await _ensureLocationServicesEnabled();
+    if (!servicesOk) return false;
+    final permissionOk = await _ensureLocationPermissionGranted();
+    if (!permissionOk) return false;
+    // Opcional: intenta obtener ubicación para validar que realmente funciona
+    try {
+      await _getCurrentLocation();
+    } catch (_) {}
+    return true;
+  }
+
+  bool get _locationRequirementMet {
+    return _locationPermissionGranted && _currentPosition != null;
+  }
+
+
   List<String> filtrarHorasPorTurno(String turno, List<String> todasLasHoras) {
     return todasLasHoras.where((hora) {
       final partesHora = hora.split(':');
@@ -111,7 +343,6 @@ class _HomeScreenState extends State<HomeScreen> {
           TextButton(
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
-              //backgroundColor: Colors.grey[200],
             ),
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancelar'),
@@ -119,7 +350,6 @@ class _HomeScreenState extends State<HomeScreen> {
           TextButton(
             style: TextButton.styleFrom(
               foregroundColor: Colors.blueAccent,
-              //backgroundColor: Colors.grey[200],
             ),
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
@@ -136,11 +366,56 @@ class _HomeScreenState extends State<HomeScreen> {
     return exit ?? false;
   }
 
+  late Timer _timer;
+
   @override
   void initState() {
     super.initState();
     _setDiaActual();
     cargarFiltrosDesdeFirebase();
+
+    // Obligar a habilitar ubicación antes de usar la app
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final ok = await _ensureLocationRequirement();
+      if (!ok) {
+        // Si no se logra, mantén la UI bloqueada (no hagas nada más)
+        setState(() {}); // Para refrescar el estado y mostrar la pantalla de bloqueo
+      } else {
+        await _initializeLocation();
+      }
+    });
+
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      _verificarCambioDeDia();
+    });
+  }
+
+  @override
+  void dispose(){
+    _timer.cancel();
+    super.dispose();
+  }
+
+  void _verificarCambioDeDia() {
+    final now = DateTime.now();
+    final nuevoDia = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+    if (_diaActual != nuevoDia) {
+      setState(() {
+        _diaActual = nuevoDia;
+        _asistenciasRegistradas.clear();
+        _cacheSalonesPorEdificio.clear();
+        _salonesEstado.clear();
+        _pendientes.clear();
+        _revisados.clear();
+        _noSupervisados.clear();
+        _mostrarTablaEdificio = false;
+        _edificioSeleccionado = null;
+      });
+
+      // Recarga filtros y datos
+      cargarFiltrosDesdeFirebase();
+    }
   }
 
   void _setDiaActual() {
@@ -398,7 +673,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return listadoCompleto;
   }
 
-  // ======= INICIO BLOQUE 2 =======
+  // ======= Buscar Clases =======
   void buscarClases() async {
     setState(() {
       _cargando = true;
@@ -566,12 +841,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _busquedaKey++;
       _expansionTileKey++;
     });
-
-    /*
-    print('Pendientes: ${pendientes.length}');
-    print('Revisados: ${revisados.length}');
-    print('No Supervisados: ${noSupervisados.length}');
-    */
   }
 
   // Función para agrupar clases consecutivas
@@ -729,12 +998,18 @@ class _HomeScreenState extends State<HomeScreen> {
     return horas * 60 + minutos;
   }
 
-  // --- Funciones de asistencias ---
+  // --- Funciones de asistencias CON GEOLOCALIZACIÓN ---
 
   Future<void> _registrarAsistencia(
       Map<dynamic, dynamic> clase,
       String estadoAsistencia,
       ) async {
+    // Verificar ubicación antes de registrar
+    bool locationValid = await _verifyLocationForAttendance();
+    if (!locationValid) {
+      return; // No continuar si la ubicación no es válida
+    }
+
     setState(() {
       _cargando = true;
     });
@@ -764,6 +1039,7 @@ class _HomeScreenState extends State<HomeScreen> {
           .child(fechaActual)
           .child(claveRegistro);
 
+      // Datos de asistencia CON INFORMACIÓN DE UBICACIÓN
       final datosAsistencia = {
         'estado': estadoAsistencia,
         'profe': clase["profe"],
@@ -773,6 +1049,26 @@ class _HomeScreenState extends State<HomeScreen> {
         'materia': clase["materia"],
         'horario': clase["horario"],
         'timestamp': ServerValue.timestamp,
+        // NUEVOS CAMPOS DE GEOLOCALIZACIÓN
+        'ubicacion': {
+          'latitud': _currentPosition?.latitude ?? 0.0,
+          'longitud': _currentPosition?.longitude ?? 0.0,
+          'direccion': _currentAddress ?? 'Dirección no disponible',
+          'precision': _currentPosition?.accuracy ?? 0.0,
+          'distancia_escuela': _currentPosition != null
+              ? _calculateDistance(
+            _currentPosition!.latitude,
+            _currentPosition!.longitude,
+            ESCUELA_LATITUD,
+            ESCUELA_LONGITUD,
+          )
+              : 0.0,
+          'dentro_radio': _isWithinSchoolRadius(),
+        },
+        'supervisor': {
+          'uid': FirebaseAuth.instance.currentUser?.uid ?? '',
+          'email': FirebaseAuth.instance.currentUser?.email ?? '',
+        }
       };
 
       await asistenciaRef.set(datosAsistencia);
@@ -795,8 +1091,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Asistencia registrada'),
-          duration: Duration(seconds: 1),
+          content: Text('Asistencia registrada con ubicación verificada'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
@@ -849,6 +1146,93 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Widget para mostrar información de ubicación
+  Widget _buildLocationInfo() {
+    if (!_locationPermissionGranted || _currentPosition == null) {
+      return Container(
+        padding: EdgeInsets.all(8),
+        margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.orange.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.orange),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.location_off, color: Colors.orange, size: 20),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Ubicación no disponible',
+                style: TextStyle(color: Colors.orange[800], fontSize: 12),
+              ),
+            ),
+            TextButton(
+              onPressed: _initializeLocation,
+              child: Text('Activar', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    bool withinRadius = _isWithinSchoolRadius();
+    double distance = _calculateDistance(
+      _currentPosition!.latitude,
+      _currentPosition!.longitude,
+      ESCUELA_LATITUD,
+      ESCUELA_LONGITUD,
+    );
+
+    return Container(
+      padding: EdgeInsets.all(8),
+      margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: withinRadius ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: withinRadius ? Colors.green : Colors.red),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            withinRadius ? Icons.location_on : Icons.location_off,
+            color: withinRadius ? Colors.green : Colors.red,
+            size: 20,
+          ),
+          SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  withinRadius ? 'Dentro de la escuela' : 'Fuera de la escuela',
+                  style: TextStyle(
+                    color: withinRadius ? Colors.green[800] : Colors.red[800],
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Distancia: ${distance.toStringAsFixed(0)}m',
+                  style: TextStyle(
+                    color: withinRadius ? Colors.green[600] : Colors.red[600],
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: _getCurrentLocation,
+            icon: Icon(Icons.refresh, size: 16),
+            padding: EdgeInsets.zero,
+            constraints: BoxConstraints(),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -859,13 +1243,95 @@ class _HomeScreenState extends State<HomeScreen> {
             Positioned.fill(
               child: Image.asset('assets/images/inicio.jpg', fit: BoxFit.cover),
             ),
-            SafeArea(
-              child: _cargandoFiltros
-                  ? Center(child: CircularProgressIndicator(color: Color(0xFF193863)))
-                  : (_mostrarPanelFiltros
-                  ? _buildPanelFiltrosYResultados()
-                  : _buildTablaAulasNoRevisadas()),
-            ),
+
+            // BLOQUEO: si no cumple requisito de ubicación, muestra pantalla de bloqueo
+            if (!_locationRequirementMet)
+              SafeArea(
+                child: Center(
+                  child: Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.location_off, size: 48, color: Colors.red),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Ubicación requerida',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Activa el GPS y otorga permiso de ubicación para continuar.',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                await _ensureLocationRequirement();
+                                setState(() {});
+                              },
+                              icon: const Icon(Icons.refresh, color: Colors.white,),
+                              label: const Text('Reintentar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF193863)),
+                            ),
+
+                            const SizedBox(width: 12),
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                await Geolocator.openLocationSettings();
+                                await Future.delayed(const Duration(seconds: 1));
+                                await _ensureLocationRequirement();
+                                setState(() {});
+                              },
+                              icon: const Icon(Icons.gps_fixed, color: Colors.white,),
+                              label: const Text('Activar GPS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),),
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF193863)),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(width: 12,),
+                        ElevatedButton.icon(
+                            onPressed: () async{
+                              await Geolocator.openAppSettings();
+                              await Future.delayed(const Duration(seconds: 1));
+                              await _ensureLocationRequirement();
+                              setState(() {});
+                            },
+                            icon: const Icon(Icons.app_settings_alt, color: Colors.white,),
+                            label: const Text('Permisos', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),),
+                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF193863)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            else
+            // TU UI normal cuando sí hay ubicación
+              SafeArea(
+                child: Column(
+                  children: [
+                    _buildLocationInfo(),
+                    Expanded(
+                      child: _cargandoFiltros
+                          ? const Center(child: CircularProgressIndicator(color: Color(0xFF193863)))
+                          : (_mostrarPanelFiltros
+                          ? _buildPanelFiltrosYResultados()
+                          : _buildTablaAulasNoRevisadas()),
+                    ),
+                  ],
+                ),
+              ),
+
             if (_cargando)
               Positioned.fill(
                 child: Container(

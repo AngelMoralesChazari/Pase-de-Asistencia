@@ -1089,6 +1089,8 @@ class _HomeScreenState extends State<HomeScreen> {
         _cargando = false;
       });
 
+      buscarClases();
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Asistencia registrada con ubicación verificada'),
@@ -1100,6 +1102,8 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _cargando = false;
       });
+      buscarClases();
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al registrar asistencia: $e')),
       );
@@ -1300,15 +1304,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         const SizedBox(width: 12,),
                         ElevatedButton.icon(
-                            onPressed: () async{
-                              await Geolocator.openAppSettings();
-                              await Future.delayed(const Duration(seconds: 1));
-                              await _ensureLocationRequirement();
-                              setState(() {});
-                            },
-                            icon: const Icon(Icons.app_settings_alt, color: Colors.white,),
-                            label: const Text('Permisos', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),),
-                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF193863)),
+                          onPressed: () async{
+                            await Geolocator.openAppSettings();
+                            await Future.delayed(const Duration(seconds: 1));
+                            await _ensureLocationRequirement();
+                            setState(() {});
+                          },
+                          icon: const Icon(Icons.app_settings_alt, color: Colors.white,),
+                          label: const Text('Permisos', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),),
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF193863)),
                         ),
                       ],
                     ),

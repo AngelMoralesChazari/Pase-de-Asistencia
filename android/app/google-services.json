@@ -23,6 +23,14 @@
           }
         },
         {
+          "client_id": "200627463961-rpe65taoui4e0rmhldqg60r0f54a4jeh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.pase_de_asistencia",
+            "certificate_hash": "154fe99f63a2d83973623b5b00b87783940f96e6"
+          }
+        },
+        {
           "client_id": "200627463961-sn9gvmddcjdr2uc63qk6t3lt122kj56f.apps.googleusercontent.com",
           "client_type": 3
         }

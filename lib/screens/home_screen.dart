@@ -183,12 +183,13 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Ubicación'),
+        backgroundColor: Colors.grey[100],
+        title: Text('ERROR', style: TextStyle(color: Colors.red)),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('OK'),
+            child: Text('OK', style: TextStyle(color: Color(0xFF193863))),
           ),
         ],
       ),
@@ -220,9 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
       _showLocationDialog(
-          'Debe estar dentro de la escuela para registrar asistencia.\n'
-              'Distancia actual: ${distance.toStringAsFixed(0)} metros\n'
-              'Distancia máxima permitida: ${RADIO_PERMITIDO.toStringAsFixed(0)} metros'
+          'Debe estar dentro del rango permitido para registrar asistencia.'
       );
       return false;
     }
@@ -238,19 +237,20 @@ class _HomeScreenState extends State<HomeScreen> {
       await showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Ubicación deshabilitada'),
+          backgroundColor: Colors.grey[300],
+          title: const Text('Ubicación Deshabilitada'),
           content: const Text('Debes activar el GPS/Ubicación para usar la app.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
+              child: const Text('Cancelar', style: TextStyle(color: Colors.red)),
             ),
             TextButton(
               onPressed: () async {
                 await Geolocator.openLocationSettings();
                 if (context.mounted) Navigator.of(context).pop();
               },
-              child: const Text('Abrir Ajustes'),
+              child: const Text('Abrir Ajustes', style: TextStyle(color: Colors.blue)),
             ),
           ],
         ),
@@ -313,7 +313,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   bool get _locationRequirementMet {
-    return _locationPermissionGranted && _currentPosition != null;
+    return _locationPermissionGranted;
   }
 
 
@@ -1150,93 +1150,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget para mostrar información de ubicación
-  Widget _buildLocationInfo() {
-    if (!_locationPermissionGranted || _currentPosition == null) {
-      return Container(
-        padding: EdgeInsets.all(8),
-        margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.orange),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.location_off, color: Colors.orange, size: 20),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Ubicación no disponible',
-                style: TextStyle(color: Colors.orange[800], fontSize: 12),
-              ),
-            ),
-            TextButton(
-              onPressed: _initializeLocation,
-              child: Text('Activar', style: TextStyle(fontSize: 12)),
-            ),
-          ],
-        ),
-      );
-    }
-
-    bool withinRadius = _isWithinSchoolRadius();
-    double distance = _calculateDistance(
-      _currentPosition!.latitude,
-      _currentPosition!.longitude,
-      ESCUELA_LATITUD,
-      ESCUELA_LONGITUD,
-    );
-
-    return Container(
-      padding: EdgeInsets.all(8),
-      margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: withinRadius ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: withinRadius ? Colors.green : Colors.red),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            withinRadius ? Icons.location_on : Icons.location_off,
-            color: withinRadius ? Colors.green : Colors.red,
-            size: 20,
-          ),
-          SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  withinRadius ? 'Dentro de la escuela' : 'Fuera de la escuela',
-                  style: TextStyle(
-                    color: withinRadius ? Colors.green[800] : Colors.red[800],
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Distancia: ${distance.toStringAsFixed(0)}m',
-                  style: TextStyle(
-                    color: withinRadius ? Colors.green[600] : Colors.red[600],
-                    fontSize: 10,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: _getCurrentLocation,
-            icon: Icon(Icons.refresh, size: 16),
-            padding: EdgeInsets.zero,
-            constraints: BoxConstraints(),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -1247,94 +1160,20 @@ class _HomeScreenState extends State<HomeScreen> {
             Positioned.fill(
               child: Image.asset('assets/images/inicio.jpg', fit: BoxFit.cover),
             ),
-
-            // BLOQUEO: si no cumple requisito de ubicación, muestra pantalla de bloqueo
-            if (!_locationRequirementMet)
-              SafeArea(
-                child: Center(
-                  child: Container(
-                    margin: const EdgeInsets.all(16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.location_off, size: 48, color: Colors.red),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Ubicación requerida',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Activa el GPS y otorga permiso de ubicación para continuar.',
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            ElevatedButton.icon(
-                              onPressed: () async {
-                                await _ensureLocationRequirement();
-                                setState(() {});
-                              },
-                              icon: const Icon(Icons.refresh, color: Colors.white,),
-                              label: const Text('Reintentar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF193863)),
-                            ),
-
-                            const SizedBox(width: 12),
-                            OutlinedButton.icon(
-                              onPressed: () async {
-                                await Geolocator.openLocationSettings();
-                                await Future.delayed(const Duration(seconds: 1));
-                                await _ensureLocationRequirement();
-                                setState(() {});
-                              },
-                              icon: const Icon(Icons.gps_fixed, color: Colors.white,),
-                              label: const Text('Activar GPS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),),
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF193863)),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(width: 12,),
-                        ElevatedButton.icon(
-                          onPressed: () async{
-                            await Geolocator.openAppSettings();
-                            await Future.delayed(const Duration(seconds: 1));
-                            await _ensureLocationRequirement();
-                            setState(() {});
-                          },
-                          icon: const Icon(Icons.app_settings_alt, color: Colors.white,),
-                          label: const Text('Permisos', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),),
-                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF193863)),
-                        ),
-                      ],
-                    ),
+            SafeArea(
+              child: Column(
+                children: [
+                  //_buildLocationInfo(),
+                  Expanded(
+                    child: _cargandoFiltros
+                        ? const Center(child: CircularProgressIndicator(color: Color(0xFF193863)))
+                        : (_mostrarPanelFiltros
+                        ? _buildPanelFiltrosYResultados()
+                        : _buildTablaAulasNoRevisadas()),
                   ),
-                ),
-              )
-            else
-            // TU UI normal cuando sí hay ubicación
-              SafeArea(
-                child: Column(
-                  children: [
-                    _buildLocationInfo(),
-                    Expanded(
-                      child: _cargandoFiltros
-                          ? const Center(child: CircularProgressIndicator(color: Color(0xFF193863)))
-                          : (_mostrarPanelFiltros
-                          ? _buildPanelFiltrosYResultados()
-                          : _buildTablaAulasNoRevisadas()),
-                    ),
-                  ],
-                ),
+                ],
               ),
+            ),
 
             if (_cargando)
               Positioned.fill(
@@ -1459,7 +1298,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: Colors.blue,
+                  color: const Color(0xFF193863),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: IconButton(

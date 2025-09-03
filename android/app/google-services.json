@@ -31,6 +31,22 @@
           }
         },
         {
+          "client_id": "200627463961-u1f0na3sr53epoh4h2phq0t624ad2am3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.pase_de_asistencia",
+            "certificate_hash": "f4a5c7bcd3b110ccda97b75b0d9b5ae7cbe188bb"
+          }
+        },
+        {
+          "client_id": "200627463961-u9qj89rdh8vlrq2m27jqhf5g33obih64.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.pase_de_asistencia",
+            "certificate_hash": "76ed38ab6626ec496cf721ab152c607cbcbf5b28"
+          }
+        },
+        {
           "client_id": "200627463961-sn9gvmddcjdr2uc63qk6t3lt122kj56f.apps.googleusercontent.com",
           "client_type": 3
         }

@@ -31,7 +31,7 @@ android {
         // ).toMutableMap()
 
         applicationId = "com.example.pase_de_asistencia"
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion.toInt()
         versionCode = flutter.versionCode.toInt()
         versionName = flutter.versionName

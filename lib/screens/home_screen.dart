@@ -225,12 +225,10 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       return false;
     }
-
     return true;
   }
 
   // ======= FIN FUNCIONES DE GEOLOCALIZACIÓN =======
-
   Future<bool> _ensureLocationServicesEnabled() async {
     final enabled = await Geolocator.isLocationServiceEnabled();
     if (!enabled) {
@@ -316,7 +314,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return _locationPermissionGranted;
   }
 
-
   List<String> filtrarHorasPorTurno(String turno, List<String> todasLasHoras) {
     return todasLasHoras.where((hora) {
       final partesHora = hora.split(':');
@@ -378,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final ok = await _ensureLocationRequirement();
       if (!ok) {
-        // Si no se logra, mantén la UI bloqueada (no hagas nada más)
+        // Si no se logra, mantén la UI bloqueada
         setState(() {}); // Para refrescar el estado y mostrar la pantalla de bloqueo
       } else {
         await _initializeLocation();
@@ -398,7 +395,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _verificarCambioDeDia() {
     final now = DateTime.now();
-    final nuevoDia = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    String? nuevoDia;
+    if (now.weekday >= 1 && now.weekday <= 6) {
+      nuevoDia = dias[now.weekday - 1];
+    }
 
     if (_diaActual != nuevoDia) {
       setState(() {
@@ -413,7 +414,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _edificioSeleccionado = null;
       });
 
-      // Recarga filtros y datos
       cargarFiltrosDesdeFirebase();
     }
   }
@@ -674,7 +674,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ======= Buscar Clases =======
-  void buscarClases() async {
+  Future<void> buscarClases() async {
     setState(() {
       _cargando = true;
       _busquedaRealizada = true;
@@ -807,6 +807,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final horaInicioStr = _parseHoraInicio(clase["horario"]);
       final partes = horaInicioStr.split(':');
+
       if (partes.length == 2) {
         final hora = int.tryParse(partes[0]) ?? 0;
         final minuto = int.tryParse(partes[1]) ?? 0;
@@ -1007,7 +1008,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Verificar ubicación antes de registrar
     bool locationValid = await _verifyLocationForAttendance();
     if (!locationValid) {
-      return; // No continuar si la ubicación no es válida
+      return;
     }
 
     setState(() {
@@ -1018,12 +1019,10 @@ class _HomeScreenState extends State<HomeScreen> {
       final app = Firebase.app();
       final database = FirebaseDatabase.instanceFor(
         app: app,
-        databaseURL:
-        'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
+        databaseURL: 'https://flutterrealtimeapp-91382-default-rtdb.firebaseio.com',
       );
 
       final ref = database.ref();
-
       final now = DateTime.now();
       final fechaActual =
           "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
@@ -1039,7 +1038,6 @@ class _HomeScreenState extends State<HomeScreen> {
           .child(fechaActual)
           .child(claveRegistro);
 
-      // Datos de asistencia CON INFORMACIÓN DE UBICACIÓN
       final datosAsistencia = {
         'estado': estadoAsistencia,
         'profe': clase["profe"],
@@ -1049,7 +1047,6 @@ class _HomeScreenState extends State<HomeScreen> {
         'materia': clase["materia"],
         'horario': clase["horario"],
         'timestamp': ServerValue.timestamp,
-        // NUEVOS CAMPOS DE GEOLOCALIZACIÓN
         'ubicacion': {
           'latitud': _currentPosition?.latitude ?? 0.0,
           'longitud': _currentPosition?.longitude ?? 0.0,
@@ -1073,23 +1070,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
       await asistenciaRef.set(datosAsistencia);
 
-      // Limpiar caché del edificio correspondiente para forzar recarga
+      // Actualizar estado local
+      setState(() {
+        _asistenciasRegistradas[claveRegistro] = estadoAsistencia;
+      });
+
+      // Limpiar cache edificio
       final edificio = "Edificio ${clase["aula"].toString().substring(0, 1)}";
       _cacheSalonesPorEdificio.remove(edificio);
 
-      //Recarga los datos actualizados para el edificio
-      final datosActualizados = await
-      _obtenerListadoCompletoAulasConEstado(edificio);
+      final datosActualizados =
+      await _obtenerListadoCompletoAulasConEstado(edificio);
       _cacheSalonesPorEdificio[edificio] = datosActualizados;
 
-      // Actualiza el estado para refrescar la UI
       setState(() {
-        _asistenciasRegistradas[claveRegistro] = estadoAsistencia;
         _salonesEstado = datosActualizados;
         _cargando = false;
       });
 
-      buscarClases();
+      // 🔥 Recargar clases después de registrar OK
+      await buscarClases();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1102,7 +1102,9 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _cargando = false;
       });
-      buscarClases();
+
+      // 🔥 Recargar clases también si falla
+      await buscarClases();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al registrar asistencia: $e')),
